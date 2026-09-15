@@ -18,8 +18,8 @@ jobs:
           import re
           p=Path('brodyaga.html')
           s=p.read_text(encoding='utf-8')
-          s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V[123] -->.*?</script>', '', s, flags=re.S)
-          patch=r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V4 -->
+          s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V[1-4] -->.*?</script>', '', s, flags=re.S)
+          patch=r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V5 -->
           <script>
           (function(){
             const API='https://vex-booking.zervex52.workers.dev/';
@@ -30,13 +30,12 @@ jobs:
               const name=(document.getElementById('vexName')?.value||'').trim();
               const contact=(document.getElementById('vexContact')?.value||'').trim();
               const box=document.querySelector('#bookingContent .vex-summary');
-              const raw=(box?.innerText||'').replace(/\u00a0/g,' ').trim();
-              const lines=raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
-              const service=lines[0]||'';
-              const details=lines.find(x=>x.includes('·')||x.includes('•'))||'';
-              const parts=details.split(/[·•]/).map(x=>x.trim());
-              const date=parts[0]||'';
-              const time=parts[1]||'';
+              const service=(box?.querySelector('b')?.textContent||'').trim();
+              const textNodes=box?[...box.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).filter(Boolean):[];
+              const details=textNodes.join(' ');
+              const pieces=details.split('·').map(x=>x.trim());
+              const date=pieces[0]||'';
+              const time=pieces[1]||'';
               if(!service||!date||!time||!name||!contact){alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');return;}
               const b=form.querySelector('button[type=submit]'); if(b){b.disabled=true;b.textContent='Отправляем…';}
               try{
@@ -57,5 +56,5 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add brodyaga.html
           git diff --cached --quiet && exit 0
-          git commit -m 'Fix Brodyaga booking payload parsing'
+          git commit -m 'Fix Brodyaga booking DOM parsing'
           git push
