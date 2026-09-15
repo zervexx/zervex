@@ -1,0 +1,42 @@
+name: Fix ZERVEX reveal animations
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Patch homepage
+        shell: bash
+        run: |
+          python - <<'PY'
+from pathlib import Path
+p=Path('index.html')
+s=p.read_text(encoding='utf-8')
+s=s.replace('.hero,.work,.lower,.divider{content-visibility:auto;contain-intrinsic-size:700px}.top{will-change:backdrop-filter}', '.top{will-change:backdrop-filter}')
+needle='.top{will-change:backdrop-filter}@media (prefers-reduced-motion:reduce)'
+reveal='.reveal{opacity:1;animation:revealIn .85s cubic-bezier(.16,1,.3,1) both;will-change:transform,opacity,filter}@keyframes revealIn{from{opacity:.15;transform:translateY(24px);filter:blur(7px)}to{opacity:1;transform:none;filter:none}}.reveal.d1{animation-delay:.08s}.reveal.d2{animation-delay:.16s}.reveal.d3{animation-delay:.24s}.reveal.d4{animation-delay:.32s}.top{will-change:backdrop-filter}@media (prefers-reduced-motion:reduce)'
+if needle in s:
+    s=s.replace(needle,reveal)
+s=s.replace('<section class="hero wrap"><div><div class="eyebrow">','<section class="hero wrap"><div class="reveal"><div class="eyebrow">')
+s=s.replace('</div><div class="hero-art"><div class="scan">','</div><div class="hero-art reveal d1"><div class="scan">',1)
+s=s.replace('<div class="divider wrap">','<div class="divider wrap reveal d2">')
+s=s.replace('<section id="work" class="work wrap"><div class="section-head">','<section id="work" class="work wrap"><div class="section-head reveal">')
+s=s.replace('<a class="project beam-card" href="brodyaga.html"','<a class="project beam-card reveal" href="brodyaga.html"')
+s=s.replace('<a class="project beam-card" href="noir.html"','<a class="project beam-card reveal d1" href="noir.html"')
+s=s.replace('<a class="project beam-card" href="eirn.html"','<a class="project beam-card reveal d2" href="eirn.html"')
+s=s.replace('<div class="lower-card beam-card"><div class="service-pane">','<div class="lower-card beam-card"><div class="service-pane reveal">')
+s=s.replace('<div id="about" class="statement-pane">','<div id="about" class="statement-pane reveal d1">')
+s=s.replace('<div id="contact" class="contact-pane">','<div id="contact" class="contact-pane reveal d2">')
+p.write_text(s,encoding='utf-8')
+PY
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add index.html
+          git diff --cached --quiet || git commit -m 'Fix disappearing blocks and add reveal animations'
+          git push
