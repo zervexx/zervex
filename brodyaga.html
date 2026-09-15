@@ -28,64 +28,30 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
 (function(){const modal=document.getElementById('bookingModal'),content=document.getElementById('bookingContent');if(!modal||!content)return;const services=[{name:'Мужская стрижка',meta:'60 мин · 1 800 ₽'},{name:'Стрижка + борода',meta:'90 мин · 2 500 ₽'},{name:'Оформление бороды',meta:'40 мин · 1 200 ₽'},{name:'Стрижка машинкой',meta:'30 мин · 1 200 ₽'}],times=['10:00','10:30','11:00','11:30','12:00','12:30','13:00','14:00','14:30','15:00','16:00','17:00','18:00','19:00','20:00','21:00'],state={step:1,service:null,date:null,time:null,name:'',contact:''};const esc=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));function open(){state.step=1;state.service=null;state.date=null;state.time=null;state.name='';state.contact='';render();modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'}function close(){modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''}function render(){const steps=[1,2,3,4].map(n=>'<i class="'+(state.step>=n?'on':'')+'"></i>').join('');let body='';if(state.step===1)body='<div class="vex-booking-head"><div class="vex-booking-kicker">БРОДЯГА / ЗАПИСЬ</div><h2 class="vex-booking-title">Выбери услугу</h2><p class="vex-booking-sub">Сначала определимся с услугой — дальше покажем время.</p></div><div class="vex-step">'+steps+'</div><div class="vex-grid">'+services.map((x,i)=>'<button class="vex-choice '+(state.service===i?'selected':'')+'" type="button" data-service="'+i+'"><strong>'+x.name+'</strong><span>'+x.meta+'</span></button>').join('')+'</div>';if(state.step===2){const ds=[];for(let d=0;d<5;d++){const dt=new Date;dt.setHours(12,0,0,0);dt.setDate(dt.getDate()+d);const iso=dt.toISOString().slice(0,10);ds.push('<button class="vex-choice '+(state.date===iso?'selected':'')+'" type="button" data-date="'+iso+'"><strong>'+(d===0?'Сегодня':d===1?'Завтра':dt.toLocaleDateString('ru-RU',{weekday:'short',day:'numeric',month:'long'}))+'</strong><span>'+dt.toLocaleDateString('ru-RU',{day:'numeric',month:'long'})+'</span></button>')}body='<div class="vex-booking-head"><div class="vex-booking-kicker">ШАГ 2 / 4</div><h2 class="vex-booking-title">Выбери дату</h2><p class="vex-booking-sub">Выбрано: '+esc(services[state.service].name)+'</p></div><div class="vex-step">'+steps+'</div><div class="vex-grid">'+ds.join('')+'</div><div class="vex-nav"><button class="vex-btn" type="button" data-back>Назад</button><button class="vex-btn primary" type="button" data-next '+(state.date?'':'disabled')+'>Далее</button></div>'}if(state.step===3)body='<div class="vex-booking-head"><div class="vex-booking-kicker">ШАГ 3 / 4</div><h2 class="vex-booking-title">Выбери время</h2><p class="vex-booking-sub">'+esc(state.date)+' · '+esc(services[state.service].name)+'</p></div><div class="vex-step">'+steps+'</div><div class="vex-times">'+times.map(t=>'<button class="vex-time '+(state.time===t?'selected':'')+'" type="button" data-time="'+t+'">'+t+'</button>').join('')+'</div><div class="vex-nav"><button class="vex-btn" type="button" data-back>Назад</button><button class="vex-btn primary" type="button" data-next '+(state.time?'':'disabled')+'>Далее</button></div>';if(state.step===4)body='<div class="vex-booking-head"><div class="vex-booking-kicker">ШАГ 4 / 4</div><h2 class="vex-booking-title">Твои контакты</h2><p class="vex-booking-sub">Оставь данные — администратор подтвердит запись.</p></div><div class="vex-step">'+steps+'</div><div class="vex-summary"><b>'+esc(services[state.service].name)+'</b><br>'+esc(state.date)+' · '+esc(state.time)+'</div><form class="vex-form" id="vexForm"><input id="vexName" required placeholder="Имя" value="'+esc(state.name)+'"><input id="vexContact" required placeholder="Телефон или Telegram" value="'+esc(state.contact)+'"><div class="vex-nav"><button class="vex-btn" type="button" data-back>Назад</button><button class="vex-btn primary" type="submit">Отправить запись</button></div></form>';content.innerHTML=body;bind()}function bind(){content.querySelectorAll('[data-service]').forEach(b=>b.onclick=()=>{state.service=+b.dataset.service;state.step=2;render()});content.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{state.date=b.dataset.date;render()});content.querySelectorAll('[data-time]').forEach(b=>b.onclick=()=>{state.time=b.dataset.time;render()});content.querySelectorAll('[data-next]').forEach(b=>b.onclick=()=>{if(state.step<4){state.step++;render()}});content.querySelectorAll('[data-back]').forEach(b=>b.onclick=()=>{if(state.step>1){state.step--;render()}});const form=document.getElementById('vexForm');if(form)form.onsubmit=e=>{e.preventDefault();state.name=document.getElementById('vexName').value.trim();state.contact=document.getElementById('vexContact').value.trim();if(!state.name||!state.contact)return;content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+esc(state.name)+', мы получили запрос на '+esc(state.date)+' в '+esc(state.time)+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>'}}document.addEventListener('click',e=>{const t=e.target.closest('a[href="#booking"]');if(t){e.preventDefault();open()}const b=e.target.closest('#headerBookingBtn');if(b){e.preventDefault();open()}});modal.querySelectorAll('[data-close-booking]').forEach(el=>el.addEventListener('click',close));document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});window.vexBooking={open,close}})();
 </script>
 
-<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->
+
+<!-- VEX_BOOKING_TELEGRAM_CONNECT_V3 -->
 <script>
 (function(){
   const API='https://vex-booking.zervex52.workers.dev/';
-  const esc=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-
   document.addEventListener('submit',async function(e){
     const form=e.target;
     if(!form || form.id!=='vexForm') return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
+    e.preventDefault(); e.stopImmediatePropagation();
     const name=(document.getElementById('vexName')?.value||'').trim();
     const contact=(document.getElementById('vexContact')?.value||'').trim();
-    const summary=document.querySelector('#bookingContent .vex-summary');
-    const text=(summary?.innerText||'').replace(/\u00a0/g,' ').trim();
-
-    // The booking summary is rendered as:
-    // service name
-    // YYYY-MM-DD · HH:MM
-    const service=(text.split(/\r?\n/)[0]||'').trim();
-    const match=text.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
-    const date=match ? match[1] : '';
-    const time=match ? match[2] : '';
-
-    if(!service || !date || !time || !name || !contact){
-      alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');
-      return;
-    }
-
-    const button=form.querySelector('button[type="submit"]');
-    if(button){button.disabled=true;button.textContent='Отправляем…'}
-
+    const box=document.querySelector('#bookingContent .vex-summary');
+    const lines=(box?.innerText||'').replace(/\\u00a0/g,' ').split(/\\r?\\n/).map(x=>x.trim()).filter(Boolean);
+    const service=lines[0]||'';
+    const m=(box?.innerText||'').match(/(\\d{4}-\\d{2}-\\d{2})\\s*[·•]\\s*(\\d{2}:\\d{2})/);
+    const date=m?.[1]||''; const time=m?.[2]||'';
+    if(!service||!date||!time||!name||!contact){alert('Выберите дату и время и заполните данные ещё раз.');return;}
+    const b=form.querySelector('button[type=submit]'); if(b){b.disabled=true;b.textContent='Отправляем…';}
     try{
-      const r=await fetch(API,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          service,
-          date,
-          time,
-          name,
-          contact,
-          site:'БРОДЯГА — zervexx.github.io/zervex'
-        })
-      });
-      const data=await r.json().catch(()=>({}));
-      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
-
-      const content=document.getElementById('bookingContent');
-      if(content){
-        content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+esc(name)+', мы получили запрос на '+esc(date)+' в '+esc(time)+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>';
-      }
-    }catch(err){
-      if(button){button.disabled=false;button.textContent='Отправить запись'}
-      alert('Не удалось отправить заявку. Попробуйте ещё раз.');
-      console.error(err);
-    }
+      const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
+      const d=await r.json(); if(!r.ok||!d.ok) throw Error(d.error||'send failed');
+      const c=document.getElementById('bookingContent');
+      if(c)c.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', заявка на '+date+' в '+time+' получена.<br>Администратор свяжется с вами для подтверждения.</p></div>';
+    }catch(err){if(b){b.disabled=false;b.textContent='Отправить запись';}alert('Не удалось отправить заявку. Попробуйте ещё раз.');console.error(err);}
   },true);
 })();
 </script>
