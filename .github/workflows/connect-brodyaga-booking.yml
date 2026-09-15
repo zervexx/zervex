@@ -1,0 +1,72 @@
+name: Connect Brodyaga Booking to Telegram
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Connect booking form
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('brodyaga.html')
+          s = p.read_text(encoding='utf-8')
+          marker = 'VEX_BOOKING_TELEGRAM_CONNECT_V1'
+          if marker in s:
+              print('Already connected')
+              raise SystemExit(0)
+
+          patch = r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V1 -->
+          <script>
+          (function(){
+            const API='https://vex-booking.zervex52.workers.dev/';
+            document.addEventListener('submit',async function(e){
+              const form=e.target;
+              if(!form || form.id!=='vexForm') return;
+              e.preventDefault();
+              e.stopImmediatePropagation();
+              const name=(document.getElementById('vexName')?.value||'').trim();
+              const contact=(document.getElementById('vexContact')?.value||'').trim();
+              const summary=document.querySelector('#bookingContent .vex-summary');
+              const lines=(summary?.innerText||'').split('\\n').map(x=>x.trim()).filter(Boolean);
+              const service=lines[0]||'Не указана';
+              const parts=(lines[1]||'').split('·').map(x=>x.trim());
+              const date=parts[0]||'Не указана';
+              const time=parts[1]||'Не указано';
+              const button=form.querySelector('button[type="submit"]');
+              if(button){button.disabled=true;button.textContent='Отправляем…'}
+              try{
+                const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
+                const data=await r.json().catch(()=>({}));
+                if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
+                const content=document.getElementById('bookingContent');
+                if(content){content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+String(name).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]))+', мы получили запрос на '+date+' в '+time+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>'}
+              }catch(err){
+                if(button){button.disabled=false;button.textContent='Отправить запись'}
+                alert('Не удалось отправить заявку. Попробуйте ещё раз.');
+                console.error(err);
+              }
+            },true);
+          })();
+          </script>'''
+          s = s.replace('</body>', patch + '\n</body>')
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add brodyaga.html
+          git diff --cached --quiet && exit 0
+          git commit -m "Connect Brodyaga booking to Telegram"
+          git push
