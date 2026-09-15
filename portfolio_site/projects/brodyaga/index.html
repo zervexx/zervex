@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#08090a">
+<title>БРОДЯГА — Барбершоп</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Unbounded:wght@500;600;700&display=swap');
+:root{--bg:#08090a;--surface:#101214;--ink:#e7e9eb;--muted:#858a90;--line:rgba(231,233,235,.11)}
+*{box-sizing:border-box}html{scroll-behavior:smooth;background:var(--bg);color-scheme:dark}body{position:relative;overflow-x:hidden;margin:0;min-height:100vh;color:var(--ink);font-family:Manrope,Arial,sans-serif;background:radial-gradient(900px 600px at 82% 8%,rgba(190,196,204,.075),transparent 62%),radial-gradient(700px 520px at 8% 42%,rgba(120,128,138,.055),transparent 65%),linear-gradient(135deg,#08090a 0%,#0c0e10 46%,#08090a 100%)}body:after{content:"";position:fixed;inset:0;pointer-events:none;z-index:1;opacity:.42;background:radial-gradient(circle at 20% 20%,rgba(255,255,255,.025) 0 1px,transparent 1.5px),radial-gradient(circle at 80% 70%,rgba(255,255,255,.018) 0 1px,transparent 1.5px);background-size:54px 54px,73px 73px;mask-image:linear-gradient(to bottom,#000,transparent 88%)}main,header,footer{position:relative;z-index:2}section{position:relative}section:before{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 0%,rgba(255,255,255,.012) 50%,transparent 100%)}body:before{content:"";position:fixed;inset:0;pointer-events:none;z-index:20;opacity:.025;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9' numOctaves='4'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.45'/%3E%3C/svg%3E")}
+h1,h2,h3,.logo,.price{font-family:Unbounded,Arial,sans-serif}.section-heading,.hero-heading{position:relative;display:inline-block;color:#f3f4f5;text-shadow:0 0 28px rgba(255,255,255,.07);isolation:isolate}.section-heading:before{content:"";position:absolute;left:0;top:-13px;width:34px;height:2px;background:#e7e9eb;transform-origin:left;transition:width .45s cubic-bezier(.16,1,.3,1)}.section-heading:after{content:"";position:absolute;left:0;bottom:-9px;width:100%;height:1px;background:linear-gradient(90deg,rgba(231,233,235,.65),rgba(231,233,235,0));transform:scaleX(.28);transform-origin:left;transition:transform .55s cubic-bezier(.16,1,.3,1)}.section-heading:hover:before{width:58px}.section-heading:hover:after{transform:scaleX(1)}.hero-heading{text-shadow:0 0 42px rgba(255,255,255,.08)}.hero-heading:after{content:"";display:block;width:72px;height:2px;margin-top:18px;background:#e7e9eb;opacity:.9;transform-origin:left;animation:titleLineIn .9s .35s cubic-bezier(.16,1,.3,1) both}.cta-heading:before{left:50%;transform:translateX(-50%)}.cta-heading:after{left:50%;transform:translateX(-50%) scaleX(.28);transform-origin:center}.cta-heading:hover:after{transform:translateX(-50%) scaleX(1)}@keyframes titleLineIn{from{opacity:0;transform:scaleX(0)}to{opacity:.9;transform:scaleX(1)}}a{color:inherit;text-decoration:none}.wrap{max-width:1360px;margin:auto;padding:0 40px}.header{height:76px;display:flex;align-items:center;justify-content:space-between;position:fixed;top:0;left:0;right:0;z-index:10;background:rgba(8,9,10,.84);backdrop-filter:blur(14px);border-bottom:1px solid var(--line)}.logo{font-size:18px;font-weight:700}.nav{display:flex;gap:34px;color:#c8cbd0;font-size:14px}.nav a:hover{color:#fff}.btn{display:inline-flex;padding:14px 24px;background:var(--ink);color:#08090a;font-weight:600;transition:.35s}.btn:hover{background:#fff;transform:translateY(-2px)}.outline{border:1px solid var(--line);background:transparent;color:var(--ink)}.outline:hover{border-color:#aeb2b8;background:rgba(255,255,255,.03)}
+.hero{padding-top:76px;min-height:760px;display:grid;grid-template-columns:1.05fr .95fr}.hero-copy{display:flex;flex-direction:column;justify-content:center;padding:70px 60px 90px 0}.eyebrow{color:var(--muted);font-size:13px;margin-bottom:25px}.hero h1{font-size:clamp(40px,5vw,62px);line-height:1.08;margin:0;letter-spacing:-.035em}.hero p{color:#aeb2b7;font-size:17px;line-height:1.7;max-width:480px;margin:28px 0 0}.actions{display:flex;gap:12px;margin-top:36px}.hero-media{min-height:680px;overflow:hidden}.hero-media img{width:100%;height:100%;object-fit:cover;filter:grayscale(1) brightness(.58) contrast(1.12);transition:1.2s cubic-bezier(.16,1,.3,1)}.hero-media:hover img{transform:scale(1.035);filter:grayscale(1) brightness(.68) contrast(1.12)}
+section{padding:120px 0;border-top:1px solid var(--line)}h2{font-size:clamp(32px,4vw,48px);line-height:1.12;margin:0;letter-spacing:-.035em}.grid2{display:grid;grid-template-columns:1fr 1fr;gap:80px}.services{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);margin-top:54px}.card{background:var(--bg);padding:40px;min-height:220px;display:flex;flex-direction:column;justify-content:space-between;transition:.45s}.card:hover{background:var(--surface);transform:translateY(-2px)}.card h3{font-size:21px;margin:0}.duration{color:var(--muted);font-size:13px;margin-top:15px}.bottom{display:flex;justify-content:space-between;align-items:end}.price{font-size:25px}.small{font-size:13px;color:#c9ccd0}.small:hover{color:#fff}.advantages{display:flex;flex-direction:column;gap:36px}.adv{display:grid;grid-template-columns:48px 1fr;gap:16px}.num{color:#858a90;font-family:Unbounded;font-size:14px}.adv h3{font:500 18px Manrope;margin:0}.adv p{color:#858a90;line-height:1.7;margin:8px 0 0;max-width:430px}.masters{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-top:54px}.master img{width:100%;aspect-ratio:3/4;object-fit:cover;filter:grayscale(1) brightness(.72);transition:.7s}.master:hover img{filter:grayscale(1) brightness(.9);transform:scale(1.015)}.master-meta{display:flex;justify-content:space-between;margin-top:16px}.master-meta b{font-family:Unbounded}.muted{color:var(--muted);font-size:13px}.gallery{columns:3;column-gap:16px;margin-top:54px}.photo{break-inside:avoid;margin-bottom:16px;overflow:hidden}.photo img{width:100%;display:block;filter:grayscale(1) brightness(.68);transition:.8s}.photo:hover img{transform:scale(1.035);filter:grayscale(1) brightness(.82)}.reviews{display:grid;grid-template-columns:repeat(3,1fr);gap:40px}.review{border-left:1px solid #4d5156;padding-left:22px}.review p{font-size:18px;line-height:1.7;margin:0}.review span{display:block;color:var(--muted);font-size:13px;margin-top:18px}.cta{background:var(--surface);text-align:center;padding:150px 20px}.cta h2{font-size:clamp(36px,5vw,58px)}.cta p{color:var(--muted);font-size:17px}.contacts{display:grid;grid-template-columns:1fr 1fr;gap:70px;margin-top:54px}.contact-list{display:flex;flex-direction:column;gap:25px;color:#d4d7da}.map{min-height:390px;border:1px solid var(--line);background:linear-gradient(rgba(255,255,255,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.035) 1px,transparent 1px);background-size:38px 38px;display:flex;align-items:center;justify-content:center;color:var(--muted)}footer{padding:42px 0;border-top:1px solid var(--line);display:flex;justify-content:space-between;color:var(--muted);font-size:13px}
+.reveal{opacity:0;transform:translateY(24px);transition:opacity .8s ease,transform .8s cubic-bezier(.16,1,.3,1)}.reveal.show{opacity:1;transform:none}
+@media(max-width:800px){.wrap{padding:0 20px}.nav,.header .btn{display:none}.hero{display:block}.hero-copy{padding:70px 0}.hero-media{min-height:480px}.grid2,.contacts{grid-template-columns:1fr;gap:45px}.services{grid-template-columns:1fr}.masters{grid-template-columns:1fr}.gallery{columns:2}.reviews{grid-template-columns:1fr;gap:32px}section{padding:85px 0}}
+</style>
+<style>
+html { scroll-behavior:smooth; scroll-padding-top:92px; overscroll-behavior-y:none; }
+.interactive-nav { cursor:pointer; transition:transform .55s cubic-bezier(.16,1,.3,1), background .4s ease, box-shadow .55s ease; }
+.interactive-nav:hover { transform:translateY(-3px); box-shadow:0 14px 40px rgba(0,0,0,.2); }
+.smooth-target { scroll-margin-top:92px; }
+</style>
+<style>
+.booking-modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .35s ease,visibility .35s ease}.booking-modal.open{opacity:1;visibility:visible;pointer-events:auto}.booking-backdrop{position:absolute;inset:0;background:rgba(0,0,0,.72);backdrop-filter:blur(12px)}.booking-dialog{position:relative;width:min(100%,500px);padding:38px;background:var(--surface);border:1px solid var(--line);box-shadow:0 30px 100px rgba(0,0,0,.45);transform:translateY(22px) scale(.97);opacity:0;transition:transform .5s cubic-bezier(.16,1,.3,1),opacity .35s ease}.booking-modal.open .booking-dialog{transform:none;opacity:1}.booking-close{position:absolute;right:16px;top:12px;border:0;background:transparent;color:var(--muted);font-size:32px;line-height:1;cursor:pointer}.booking-close:hover{color:var(--ink)}.booking-dialog h2{margin:0 0 12px;font-size:36px}.booking-dialog>p{margin:0 0 26px;color:var(--muted);line-height:1.7}.booking-actions{display:grid;gap:10px}.booking-actions a{display:flex;justify-content:space-between;align-items:center;padding:17px 18px;border:1px solid var(--line);transition:.3s}.booking-actions a:hover{background:var(--surface2);transform:translateX(4px)}.booking-actions span{font-weight:600}.booking-actions small{color:var(--muted)}.booking-meta{margin-top:24px;padding-top:18px;border-top:1px solid var(--line);color:var(--muted);font-size:13px;line-height:1.6}@media(max-width:520px){.booking-dialog{padding:30px 22px}.booking-actions a{display:block}.booking-actions small{display:block;margin-top:5px}.booking-dialog h2{font-size:30px}}
+</style>
+
+</head><body id="top">
+<header class="header"><div class="wrap" style="display:flex;width:100%;align-items:center;justify-content:space-between"><a class="logo" href="#top">БРОДЯГА</a><nav class="nav"><a href="#services">Услуги</a><a href="#about">О нас</a><a href="#masters">Мастера</a><a href="#gallery">Атмосфера</a><a href="#contacts">Контакты</a></nav><button class="btn" id="headerBookingBtn" type="button">Записаться</button></div></header>
+<main>
+<div class="wrap"><section class="hero" style="border:0"><div class="hero-copy reveal"><div class="eyebrow">Москва, Большая Никитская</div><h1 class="hero-heading">Барбершоп для тех,<br>кому не нужен<br>лишний шум</h1><p>Стрижки, борода и хороший кофе. Без конвейера.</p><div class="actions"><a class="btn" href="#booking">Записаться</a><a class="btn outline" href="#services">Посмотреть услуги</a></div></div><div class="hero-media"><img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1400&q=80&auto=format&fit=crop"></div></section></div>
+<section id="services"><div class="wrap reveal"><h2 class="section-heading">Услуги</h2><div class="services">
+<a class="card" href="#booking" aria-label="Записаться на услугу: Мужская стрижка"><div><h3>Мужская стрижка</h3><div class="duration">60 мин</div></div><div class="bottom"><b class="price">1 800 ₽</b><span class="small">Записаться</span></div></a>
+<a class="card" href="#booking" aria-label="Записаться на услугу: Стрижка + борода"><div><h3>Стрижка + борода</h3><div class="duration">90 мин</div></div><div class="bottom"><b class="price">2 500 ₽</b><span class="small">Записаться</span></div></a>
+<a class="card" href="#booking" aria-label="Записаться на услугу: Оформление бороды"><div><h3>Оформление бороды</h3><div class="duration">40 мин</div></div><div class="bottom"><b class="price">1 200 ₽</b><span class="small">Записаться</span></div></a>
+<a class="card" href="#booking" aria-label="Записаться на услугу: Стрижка машинкой"><div><h3>Стрижка машинкой</h3><div class="duration">30 мин</div></div><div class="bottom"><b class="price">1 200 ₽</b><span class="small">Записаться</span></div></a>
+</div></div></section>
+<section id="about"><div class="wrap grid2"><div class="reveal"><h2 class="section-heading">Здесь всё просто</h2><p style="color:#858a90;font-size:18px;line-height:1.7;max-width:430px">Точная работа, сильная форма и спокойная атмосфера.</p></div><div class="advantages reveal"><div class="adv"><span class="num">01</span><div><h3>Мастера с опытом</h3><p>Каждый в кресле барбера не первый год — рука набита, лишних вопросов не будет.</p></div></div><div class="adv"><span class="num">02</span><div><h3>Работаем по записи</h3><p>Приходишь ровно в своё время. Никаких очередей и ожидания.</p></div></div><div class="adv"><span class="num">03</span><div><h3>Никакого конвейера</h3><p>На каждого мастера — своя скорость. Мы делаем нормально.</p></div></div></div></div></section>
+<section id="masters"><div class="wrap reveal"><h2 class="section-heading">Мастера</h2><div class="masters">
+<div class="master"><img src="https://images.unsplash.com/photo-1674087255835-3aade1a79227?w=900&q=80&auto=format&fit=crop"><div class="master-meta"><b>МАКС</b><span class="muted">Барбер</span></div></div>
+<div class="master"><img src="https://images.unsplash.com/photo-1630827020718-3433092696e7?w=900&q=80&auto=format&fit=crop"><div class="master-meta"><b>АРТЁМ</b><span class="muted">Барбер</span></div></div>
+<div class="master"><img src="https://images.unsplash.com/photo-1603466606049-93669922db07?w=900&q=80&auto=format&fit=crop"><div class="master-meta"><b>ДЕНИС</b><span class="muted">Барбер</span></div></div></div></div></section>
+<section id="gallery"><div class="wrap reveal"><h2 class="section-heading">Атмосфера</h2><div class="gallery">
+<div class="photo"><img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=1000&q=80&auto=format&fit=crop"></div><div class="photo"><img src="https://images.unsplash.com/photo-1578209143563-177db741ac0c?w=1000&q=80&auto=format&fit=crop"></div><div class="photo"><img src="https://images.unsplash.com/photo-1759134248487-e8baaf31e33e?w=1000&q=80&auto=format&fit=crop"></div><div class="photo"><img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?w=700&q=80&auto=format&fit=crop&crop=bottom"></div><div class="photo"><img src="https://images.unsplash.com/photo-1578209143563-177db741ac0c?w=700&q=80&auto=format&fit=crop&crop=top"></div></div></div></section>
+<section><div class="wrap reveal"><h2 class="section-heading">Отзывы</h2><div class="reviews" style="margin-top:54px"><div class="review"><p>«Наконец-то нашёл место, где реально понимают, что я хочу.»</p><span>— Максим</span></div><div class="review"><p>«Хожу сюда второй год. Всегда стабильно.»</p><span>— Артём</span></div><div class="review"><p>«Атмосфера + мастера = 10/10.»</p><span>— Илья</span></div></div></div></section>
+<section id="booking" class="cta"><div class="reveal"><h2 class="section-heading cta-heading">Увидимся в кресле?</h2><p>Выбирай время — остальное мы сделаем сами.</p><a class="btn" href="tel:+79991234567">Записаться</a></div></section>
+<section id="contacts"><div class="wrap reveal"><h2 class="section-heading">Контакты</h2><div class="contacts"><div class="contact-list"><div>Москва, ул. Большая Никитская, 24</div><a href="tel:+79991234567">+7 (999) 123-45-67</a><div>Ежедневно 10:00–22:00</div><div class="actions"><a class="btn outline" href="https://t.me/">Telegram</a><a class="btn outline" href="https://wa.me/79991234567">WhatsApp</a></div></div><div class="map">Большая Никитская, 24</div></div></div></section>
+</main>
+<div class="booking-modal" id="bookingModal" aria-hidden="true">
+  <div class="booking-backdrop" data-close-booking></div>
+  <div class="booking-dialog" role="dialog" aria-modal="true" aria-labelledby="bookingTitle">
+    <button class="booking-close" type="button" data-close-booking aria-label="Закрыть">×</button>
+    <div class="eyebrow">БРОДЯГА / ЗАПИСЬ</div>
+    <h2 id="bookingTitle">Записаться</h2>
+    <p>Выбери удобный способ связи — администратор подтвердит время.</p>
+    <div class="booking-actions">
+      <a href="tel:+79991234567"><span>Позвонить</span><small>+7 (999) 123-45-67</small></a>
+      <a href="https://t.me/" target="_blank" rel="noreferrer"><span>Telegram</span><small>Написать →</small></a>
+      <a href="https://wa.me/79991234567" target="_blank" rel="noreferrer"><span>WhatsApp</span><small>Написать →</small></a>
+    </div>
+    <div class="booking-meta">Москва · Большая Никитская, 24 · ежедневно 10:00–22:00</div>
+  </div>
+</div>
+<footer><div class="wrap" style="display:flex;width:100%;justify-content:space-between"><b style="font-family:Unbounded;color:#e7e9eb">БРОДЯГА</b><span>© 2026</span></div></footer>
+<script>const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)e.target.classList.add('show')}),{threshold:.12});document.querySelectorAll('.reveal').forEach(e=>io.observe(e));</script>
+<script>
+document.querySelectorAll('a[href^="#"]').forEach(link => {
+  link.addEventListener('click', function(e) {
+    const id = this.getAttribute('href');
+    if (!id || id === '#') return;
+    const target = document.querySelector(id);
+    if (target) { e.preventDefault(); target.scrollIntoView({behavior:'smooth', block:'start'}); history.replaceState(null,'',id); }
+  });
+});
+</script><script>
+document.addEventListener('click', function(e){
+  const link=e.target.closest('a[href^="#"]');
+  if(!link) return;
+  const href=link.getAttribute('href');
+  if(!href || href==='#') return;
+  const el=document.querySelector(href);
+  if(!el) return;
+  e.preventDefault();
+  el.scrollIntoView({behavior:'smooth',block:'start'});
+  history.replaceState(null,'',href);
+});
+</script>
+
+<script>
+(function(){
+  const modal=document.getElementById('bookingModal');
+  const openBtn=document.getElementById('headerBookingBtn');
+  if(!modal||!openBtn)return;
+  const open=()=>{modal.classList.add('open');modal.setAttribute('aria-hidden','false');document.body.style.overflow='hidden'};
+  const close=()=>{modal.classList.remove('open');modal.setAttribute('aria-hidden','true');document.body.style.overflow=''};
+  openBtn.addEventListener('click',open);
+  modal.querySelectorAll('[data-close-booking]').forEach(el=>el.addEventListener('click',close));
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+})();
+</script>
+</body></html>
