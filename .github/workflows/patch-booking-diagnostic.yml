@@ -1,0 +1,53 @@
+name: Patch booking diagnostics
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/patch-booking-diagnostic.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Patch Worker and Brodyaga error details
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          worker = Path('vex-booking-api/worker.js')
+          text = worker.read_text()
+          old = 'return json({ ok: false, error: "Не удалось отправить заявку" }, 502);'
+          new = 'return json({ ok: false, error: `Не удалось отправить заявку: ${tgResult.description || tgResult.error_code || "Telegram API error"}` }, 502);'
+          if old not in text:
+              raise SystemExit('Worker target text not found')
+          worker.write_text(text.replace(old, new, 1))
+
+          site = Path('brodyaga.html')
+          text = site.read_text()
+          old = "alert('Не удалось отправить заявку. Попробуйте ещё раз.');"
+          new = "alert(err?.message || 'Не удалось отправить заявку. Попробуйте ещё раз.');"
+          if old not in text:
+              raise SystemExit('Brodyaga alert target text not found')
+          site.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Commit patch
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add vex-booking-api/worker.js brodyaga.html
+          git commit -m 'fix: expose booking delivery error' || exit 0
+          git push
+
+      - name: Remove temporary workflow
+        run: |
+          git rm .github/workflows/patch-booking-diagnostic.yml
+          git commit -m 'chore: remove temporary booking diagnostic workflow'
+          git push
