@@ -20,7 +20,13 @@ jobs:
           p = Path('brodyaga.html')
           s = p.read_text(encoding='utf-8')
 
-          # Handle every booking submit handler in the page.
+          # V5 capture handler must handle HTTP 409 before generic errors.
+          s = s.replace(
+              "const d=await r.json(); if(!r.ok||!d.ok) throw Error(d.error||'send failed');",
+              "const d=await r.json(); if(r.status===409 || d.error==='Это время уже занято') throw Error('SLOT_BUSY');\n      if(!r.ok||!d.ok) throw Error(d.error||'send failed');"
+          )
+
+          # Handle every other booking submit handler too.
           s = s.replace(
               "if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');",
               "if(r.status===409 || data.error==='Это время уже занято') throw new Error('SLOT_BUSY');\n      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');"
@@ -40,6 +46,6 @@ jobs:
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
           git add brodyaga.html
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: show occupied slot message'
+          git commit -m 'fix: handle busy slot in booking'
           git pull --rebase origin main
           git push
