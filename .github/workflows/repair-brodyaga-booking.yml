@@ -22,15 +22,9 @@ jobs:
           p=Path('brodyaga.html')
           s=p.read_text(encoding='utf-8')
 
-          # Remove all generated Telegram interceptors from previous attempts.
           s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V[0-9]+ -->.*?</script>', '', s, flags=re.S)
-
-          # Remove the old slot-guard fetch override; it caused duplicate/competing alerts.
           s=re.sub(r'<script id="vex-slot-guard-script">.*?</script>', '', s, flags=re.S)
           s=re.sub(r'<style id="vex-slot-guard-style">.*?</style>', '', s, flags=re.S)
-
-          # Replace the native booking submit handler's send block with a single handler.
-          marker='VEX_BOOKING_FINAL_HANDLER'
           s=re.sub(r'<script id="vex-booking-final-handler">.*?</script>', '', s, flags=re.S)
 
           patch=r'''<script id="vex-booking-final-handler">
@@ -48,7 +42,8 @@ jobs:
                 e.stopImmediatePropagation();
                 const name=(document.getElementById('vexName')?.value||'').trim();
                 const contact=(document.getElementById('vexContact')?.value||'').trim();
-                const summary=form.querySelector('.vex-summary');
+                // Summary can be outside the form inside the booking modal.
+                const summary=document.querySelector('#bookingContent .vex-summary');
                 const text=(summary?.textContent||'').replace(/\s+/g,' ').trim();
                 const service=(summary?.querySelector('b')?.textContent||'').trim();
                 const m=text.match(/(20\d{2}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
@@ -92,5 +87,5 @@ jobs:
           git config user.email '41898282+users.noreply.github.com'
           git add brodyaga.html
           git diff --cached --quiet && exit 0
-          git commit -m 'fix: install final Brodyaga booking handler'
+          git commit -m 'fix: read booking summary outside form'
           git push
