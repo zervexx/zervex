@@ -2,71 +2,12 @@ name: Fix Brodyaga Booking
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - '.github/workflows/fix-brodyaga-booking.yml'
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Patch booking integration
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('brodyaga.html')
-          s=p.read_text(encoding='utf-8')
-          s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V[1-6] -->.*?</script>', '', s, flags=re.S)
-          patch=r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V6 -->
-          <script>
-          (function(){
-            const API='https://vex-booking.zervex52.workers.dev/';
-            document.addEventListener('submit',async function(e){
-              const form=e.target;
-              if(!form || form.id!=='vexForm') return;
-              e.preventDefault();
-              e.stopImmediatePropagation();
-              const name=(document.getElementById('vexName')?.value||'').trim();
-              const contact=(document.getElementById('vexContact')?.value||'').trim();
-              const box=document.querySelector('#bookingContent .vex-summary');
-              const raw=(box?.textContent||'').replace(/\s+/g,' ').trim();
-              const service=(box?.querySelector('b')?.textContent||'').trim();
-              const match=raw.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
-              const date=match?.[1]||'';
-              const time=match?.[2]||'';
-              if(!service||!date||!time||!name||!contact){
-                alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');
-                return;
-              }
-              const b=form.querySelector('button[type=submit]');
-              if(b){b.disabled=true;b.textContent='Отправляем…';}
-              try{
-                const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
-                const d=await r.json();
-                if(!r.ok||!d.ok) throw Error(d.error||'send failed');
-                const c=document.getElementById('bookingContent');
-                if(c)c.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', заявка на '+date+' в '+time+' получена.<br>Администратор свяжется с вами для подтверждения.</p></div>';
-              }catch(err){
-                if(b){b.disabled=false;b.textContent='Отправить запись';}
-                alert('Не удалось отправить заявку. Попробуйте ещё раз.');
-                console.error(err);
-              }
-            },true);
-          })();
-          </script>'''
-          s=s.replace('</body>',patch+'\n</body>')
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Commit
-        run: |
-          git config user.name 'github-actions[bot]'
-          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add brodyaga.html
-          git diff --cached --quiet && exit 0
-          git commit -m 'Fix Brodyaga booking data extraction'
-          git push
+      - run: echo "Legacy workflow disabled"
