@@ -1,0 +1,99 @@
+name: Install NOIR booking
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'noir.html'
+      - '.github/workflows/install-noir-booking.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install reservation UI
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('noir.html')
+          s = p.read_text(encoding='utf-8')
+          marker = '<!-- VEX-NOIR-BOOKING -->'
+          if marker in s:
+              print('NOIR booking already installed')
+              raise SystemExit(0)
+
+          block = r'''<!-- VEX-NOIR-BOOKING -->
+          <style>
+          .noir-booking-overlay{position:fixed;inset:0;z-index:1000;display:none;align-items:center;justify-content:center;padding:24px;background:rgba(0,0,0,.72);backdrop-filter:blur(14px)}
+          .noir-booking-overlay.open{display:flex}
+          .noir-booking{width:min(560px,100%);max-height:min(760px,calc(100vh - 40px));overflow:auto;background:#11100e;border:1px solid rgba(238,231,218,.16);box-shadow:0 30px 100px rgba(0,0,0,.55);padding:30px}
+          .noir-booking-head{display:flex;justify-content:space-between;gap:20px;align-items:flex-start;margin-bottom:26px}
+          .noir-booking-kicker{font:600 9px Arial,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#a9a094;margin-bottom:8px}
+          .noir-booking-title{font:400 30px Georgia,serif;margin:0;color:#eee7da}
+          .noir-booking-close{border:0;background:none;color:#a9a094;font-size:24px;line-height:1;cursor:pointer;padding:0 0 4px}.noir-booking-close:hover{color:#eee7da}
+          .noir-booking-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+          .noir-booking-field{margin-bottom:16px}.noir-booking-field.full{grid-column:1/-1}
+          .noir-booking-label{display:block;font:600 9px Arial,sans-serif;letter-spacing:.16em;text-transform:uppercase;color:#a9a094;margin-bottom:8px}
+          .noir-booking input,.noir-booking textarea{width:100%;border:1px solid rgba(238,231,218,.16);background:#090807;color:#eee7da;padding:13px 14px;outline:0;border-radius:0;font:400 13px Arial,sans-serif}.noir-booking textarea{min-height:82px;resize:vertical}.noir-booking input:focus,.noir-booking textarea:focus{border-color:#bca27b}
+          .noir-booking-slots{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}.noir-booking-slot{border:1px solid rgba(238,231,218,.14);background:#0b0a09;color:#eee7da;padding:10px 4px;font:500 11px Arial,sans-serif;cursor:pointer}.noir-booking-slot:hover{border-color:#bca27b}.noir-booking-slot.active{background:#eee7da;color:#090807;border-color:#eee7da}.noir-booking-slot.busy{opacity:.25;cursor:not-allowed;text-decoration:line-through}
+          .noir-booking-submit{width:100%;height:50px;border:1px solid #8d7a5e;background:#eee7da;color:#090807;cursor:pointer;font:600 10px Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;margin-top:6px}.noir-booking-submit:hover{background:#bca27b;border-color:#bca27b}.noir-booking-submit:disabled{opacity:.5;cursor:wait}
+          .noir-booking-note{font:400 10px/1.6 Arial,sans-serif;color:#81796e;margin:13px 0 0}.noir-booking-error{display:none;color:#c98f7f;font:400 11px/1.5 Arial,sans-serif;margin:0 0 12px}.noir-booking-error.show{display:block}
+          .noir-booking-success{text-align:center;padding:44px 10px}.noir-booking-success-mark{font-size:32px;color:#bca27b;margin-bottom:15px}.noir-booking-success h3{font:400 28px Georgia,serif;margin:0 0 10px}.noir-booking-success p{font:400 12px/1.7 Arial,sans-serif;color:#a9a094;margin:0}
+          @media(max-width:560px){.noir-booking-overlay{padding:12px}.noir-booking{padding:22px;max-height:calc(100vh - 24px)}.noir-booking-grid{grid-template-columns:1fr}.noir-booking-field.full{grid-column:auto}.noir-booking-slots{grid-template-columns:repeat(3,1fr)}.noir-booking-title{font-size:25px}}
+          </style>
+          <div class="noir-booking-overlay" id="noirBookingOverlay" aria-hidden="true">
+            <div class="noir-booking" role="dialog" aria-modal="true" aria-labelledby="noirBookingTitle">
+              <div class="noir-booking-head"><div><div class="noir-booking-kicker">NOIR · reservation</div><h2 class="noir-booking-title" id="noirBookingTitle">Забронировать стол</h2></div><button class="noir-booking-close" type="button" aria-label="Закрыть">×</button></div>
+              <form id="noirBookingForm" novalidate>
+                <div class="noir-booking-grid">
+                  <div class="noir-booking-field"><label class="noir-booking-label" for="noirDate">Дата</label><input id="noirDate" type="date" required></div>
+                  <div class="noir-booking-field"><label class="noir-booking-label" for="noirGuests">Гостей</label><input id="noirGuests" type="number" min="1" max="12" value="2" required></div>
+                  <div class="noir-booking-field full"><span class="noir-booking-label">Время</span><div class="noir-booking-slots" id="noirSlots"></div></div>
+                  <div class="noir-booking-field"><label class="noir-booking-label" for="noirName">Имя</label><input id="noirName" type="text" autocomplete="name" placeholder="Ваше имя" required></div>
+                  <div class="noir-booking-field"><label class="noir-booking-label" for="noirContact">Телефон / Telegram</label><input id="noirContact" type="text" autocomplete="tel" placeholder="Как с вами связаться" required></div>
+                  <div class="noir-booking-field full"><label class="noir-booking-label" for="noirComment">Комментарий</label><textarea id="noirComment" placeholder="Особые пожелания, повод визита и т.д."></textarea></div>
+                </div>
+                <p class="noir-booking-error" id="noirBookingError"></p>
+                <button class="noir-booking-submit" type="submit">Отправить запрос</button>
+                <p class="noir-booking-note">После отправки администратор NOIR подтвердит бронирование.</p>
+              </form>
+              <div id="noirBookingSuccess" class="noir-booking-success" hidden><div class="noir-booking-success-mark">—</div><h3>Запрос получен</h3><p>Мы получили вашу заявку. Администратор свяжется с вами для подтверждения бронирования.</p></div>
+            </div>
+          </div>
+          <script>
+          (()=>{
+            const API='https://vex-booking.zervex52.workers.dev/';
+            const overlay=document.getElementById('noirBookingOverlay');
+            const form=document.getElementById('noirBookingForm');
+            if(!overlay||!form)return;
+            const date=document.getElementById('noirDate'),guests=document.getElementById('noirGuests'),slots=document.getElementById('noirSlots'),error=document.getElementById('noirBookingError');
+            const min=new Date(); min.setHours(0,0,0,0); date.min=min.toISOString().slice(0,10); const d0=new Date(min); d0.setDate(d0.getDate()+30); date.max=d0.toISOString().slice(0,10); date.value=date.min;
+            let selectedTime='';
+            const open=()=>{overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');loadSlots()};
+            const close=()=>{overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true')};
+            document.querySelectorAll('.book').forEach(b=>b.addEventListener('click',e=>{e.preventDefault();open()}));
+            overlay.querySelector('.noir-booking-close').addEventListener('click',close); overlay.addEventListener('click',e=>{if(e.target===overlay)close()}); document.addEventListener('keydown',e=>{if(e.key==='Escape')close()});
+            async function loadSlots(){selectedTime='';slots.innerHTML='<div style="grid-column:1/-1;color:#81796e;font:10px Arial">Загружаем доступное время…</div>';error.classList.remove('show');try{const r=await fetch(API+'availability?client=noir&date='+encodeURIComponent(date.value));const d=await r.json();if(!r.ok||!d.ok)throw 0;const busy=new Set(d.busy||[]);const times=d.slots||['12:00','12:30','13:00','13:30','14:00','14:30','15:00','15:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00','19:30','20:00','20:30','21:00','21:30','22:00','22:30','23:00','23:30'];slots.innerHTML='';times.forEach(t=>{const b=document.createElement('button');b.type='button';b.className='noir-booking-slot'+(busy.has(t)?' busy':'');b.textContent=t;b.disabled=busy.has(t);if(!b.disabled)b.onclick=()=>{selectedTime=t;slots.querySelectorAll('.active').forEach(x=>x.classList.remove('active'));b.classList.add('active')};slots.appendChild(b)})}catch(_){slots.innerHTML='<div style="grid-column:1/-1;color:#81796e;font:10px Arial">Не удалось загрузить время. Попробуйте обновить.</div>'}}
+            date.addEventListener('change',loadSlots);
+            form.addEventListener('submit',async e=>{e.preventDefault();error.classList.remove('show');const name=document.getElementById('noirName').value.trim(),contact=document.getElementById('noirContact').value.trim(),comment=document.getElementById('noirComment').value.trim(),g=Number(guests.value);if(!date.value||!selectedTime||!name||!contact||g<1||g>12){error.textContent='Выберите дату и время и заполните имя и контакт.';error.classList.add('show');return}const btn=form.querySelector('button[type=submit]');btn.disabled=true;btn.textContent='Отправляем…';try{const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({client:'noir',bookingType:'restaurant',date:date.value,time:selectedTime,guests:g,name,contact,comment,site:'NOIR — zervexx.github.io/zervex'})});const d=await r.json().catch(()=>({}));if(r.status===409){throw new Error('Это время уже занято. Выберите другое время.')}if(!r.ok||!d.ok)throw new Error(d.error||'Не удалось отправить заявку');form.hidden=true;document.getElementById('noirBookingSuccess').hidden=false}catch(err){error.textContent=err.message||'Не удалось отправить заявку. Попробуйте ещё раз.';error.classList.add('show');btn.disabled=false;btn.textContent='Отправить запрос'}});
+          })();
+          </script>
+          '''
+          s = s.replace('</body>', block + '\n</body>', 1)
+          p.write_text(s, encoding='utf-8')
+          PY
+
+      - name: Commit generated change
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add noir.html
+          git diff --cached --quiet && exit 0
+          git commit -m 'feat: connect NOIR reservation form to VEX Booking'
+          git push
