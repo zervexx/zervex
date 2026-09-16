@@ -14,14 +14,116 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Update booking alert text
+      - name: Upgrade Brodyaga booking
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
           p=Path('brodyaga.html')
           s=p.read_text(encoding='utf-8')
-          s=s.replace("alert('Это время уже занято. Выберите другое время.');", "alert('Время уже забронировано. Выберите другое время.');")
-          s=s.replace('alert("Это время уже занято. Выберите другое время.");', 'alert("Время уже забронировано. Выберите другое время.");')
+
+          # Remove generated handlers from previous attempts.
+          s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V[0-9]+ -->.*?</script>', '', s, flags=re.S)
+          s=re.sub(r'<script id="vex-slot-guard-script">.*?</script>', '', s, flags=re.S)
+          s=re.sub(r'<style id="vex-slot-guard-style">.*?</style>', '', s, flags=re.S)
+          s=re.sub(r'<script id="vex-booking-final-handler">.*?</script>', '', s, flags=re.S)
+          s=re.sub(r'<style id="vex-booking-availability-style">.*?</style>', '', s, flags=re.S)
+
+          style=r'''<style id="vex-booking-availability-style">
+          .vex-time.busy{opacity:.28;cursor:not-allowed;text-decoration:line-through}
+          .vex-time.busy:hover{background:transparent;color:var(--ink);transform:none}
+          </style>'''
+
+          patch=r'''<script id="vex-booking-final-handler">
+          (()=>{
+            const API='https://vex-booking.zervex52.workers.dev/';
+            const root=document.getElementById('bookingContent');
+            if(!root) return;
+
+            let lastAvailabilityDate='';
+            let loading=false;
+
+            async function loadBusyTimes(){
+              const buttons=[...root.querySelectorAll('.vex-time')];
+              if(!buttons.length || loading) return;
+
+              const text=(root.textContent||'').replace(/\s+/g,' ');
+              const dateMatch=text.match(/(20\d{2}-\d{2}-\d{2})/);
+              const date=dateMatch?.[1]||'';
+              if(!date) return;
+              if(date===lastAvailabilityDate && buttons.some(b=>b.dataset.busyChecked==='1')) return;
+
+              loading=true;
+              try{
+                const r=await fetch(API+'availability?date='+encodeURIComponent(date),{cache:'no-store'});
+                const d=await r.json().catch(()=>({}));
+                const busy=Array.isArray(d.busy)?d.busy:[];
+                buttons.forEach(btn=>{
+                  const time=btn.textContent.trim();
+                  const isBusy=busy.includes(time);
+                  btn.disabled=isBusy;
+                  btn.classList.toggle('busy',isBusy);
+                  btn.dataset.busyChecked='1';
+                  if(isBusy) btn.title='Время уже забронировано';
+                  else btn.removeAttribute('title');
+                });
+                lastAvailabilityDate=date;
+              }catch(err){
+                console.error('VEX availability error',err);
+              }finally{
+                loading=false;
+              }
+            }
+
+            function install(){
+              const form=document.getElementById('vexForm');
+              if(form && form.dataset.vexFinal!=='1'){
+                form.dataset.vexFinal='1';
+                form.addEventListener('submit',async e=>{
+                  e.preventDefault();
+                  e.stopImmediatePropagation();
+                  const name=(document.getElementById('vexName')?.value||'').trim();
+                  const contact=(document.getElementById('vexContact')?.value||'').trim();
+                  const summary=root.querySelector('.vex-summary');
+                  const text=(summary?.textContent||'').replace(/\s+/g,' ').trim();
+                  const service=(summary?.querySelector('b')?.textContent||'').trim();
+                  const m=text.match(/(20\d{2}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
+                  const date=m?.[1]||'';
+                  const time=m?.[2]||'';
+                  if(!service||!date||!time||!name||!contact){
+                    alert('Проверьте дату, время, имя и контакт.');
+                    return;
+                  }
+                  const button=form.querySelector('button[type=submit]');
+                  if(button){button.disabled=true;button.textContent='Отправляем…';}
+                  try{
+                    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
+                    const d=await r.json().catch(()=>({}));
+                    if(r.status===409 || d.error==='Это время уже занято'){
+                      if(button){button.disabled=false;button.textContent='Отправить запись';}
+                      alert('Время уже забронировано. Выберите другое время.');
+                      lastAvailabilityDate='';
+                      loadBusyTimes();
+                      return;
+                    }
+                    if(!r.ok||!d.ok) throw new Error(d.error||'Ошибка отправки');
+                    root.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', мы получили запрос на '+date+' в '+time+'.<br>Администратор свяжется с вами для подтверждения.</p></div>';
+                  }catch(err){
+                    if(button){button.disabled=false;button.textContent='Отправить запись';}
+                    console.error(err);
+                    alert('Не удалось отправить заявку. Попробуйте ещё раз.');
+                  }
+                },true);
+              }
+              loadBusyTimes();
+            }
+
+            new MutationObserver(()=>install()).observe(root,{childList:true,subtree:true});
+            install();
+          })();
+          </script>'''
+
+          s=s.replace('</body>',style+'\n'+patch+'\n</body>',1)
           p.write_text(s,encoding='utf-8')
           PY
       - name: Commit
@@ -30,5 +132,5 @@ jobs:
           git config user.email '41898282+users.noreply.github.com'
           git add brodyaga.html
           git diff --cached --quiet && exit 0
-          git commit -m 'copy: improve occupied slot message'
+          git commit -m 'feat: disable booked Brodyaga time slots'
           git push
