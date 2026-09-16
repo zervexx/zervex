@@ -16,7 +16,7 @@ export const CLIENTS = {
       maxDaysAhead: 30,
       slotIntervalMinutes: 30,
       workingDays: [1, 2, 3, 4, 5, 6, 7],
-      workingHours: { start: "10:00", end: "21:00" }
+      workingHours: { start: "10:00", end: "22:00" }
     },
     services: [
       { id: "haircut", name: "Мужская стрижка", duration: 60, price: 1800 },
