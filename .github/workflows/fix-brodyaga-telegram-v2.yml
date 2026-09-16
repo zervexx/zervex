@@ -1,44 +1,13 @@
 name: Fix Brodyaga Telegram booking data
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Patch booking submit
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-          p=Path('brodyaga.html')
-          s=p.read_text(encoding='utf-8')
-          if 'VEX_BOOKING_TELEGRAM_CONNECT_V2' in s:
-              raise SystemExit(0)
-
-          # Remove the previous external submit interceptor if it was already applied.
-          s=re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V1 -->.*?</script>', '', s, flags=re.S)
-
-          old=re.search(r'if\(form\)form\.onsubmit=e=>\{.*?\}\}\}document\.addEventListener\(\'click\'', s, flags=re.S)
-          if not old:
-              raise SystemExit('Could not locate booking submit handler')
-
-          new=r'''if(form)form.onsubmit=async e=>{e.preventDefault();state.name=document.getElementById('vexName').value.trim();state.contact=document.getElementById('vexContact').value.trim();if(!state.name||!state.contact)return;const submit=form.querySelector('button[type="submit"]');if(submit){submit.disabled=true;submit.textContent='Отправляем…'}try{const r=await fetch('https://vex-booking.zervex52.workers.dev/',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service:services[state.service].name,date:state.date,time:state.time,name:state.name,contact:state.contact,site:'БРОДЯГА'})});const data=await r.json().catch(()=>({}));if(!r.ok||!data.ok)throw new Error(data.error||'Ошибка отправки');content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+esc(state.name)+', мы получили запрос на '+esc(state.date)+' в '+esc(state.time)+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>'}catch(err){if(submit){submit.disabled=false;submit.textContent='Отправить запись'}alert('Не удалось отправить заявку. Попробуйте ещё раз.');console.error(err)}}}document.addEventListener('click' '''
-          s=s[:old.start()]+new+s[old.end():]
-          s=s.replace('</body>','<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->\n</body>')
-          p.write_text(s,encoding='utf-8')
-          PY
-      - name: Commit
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add brodyaga.html
-          git diff --cached --quiet && exit 0
-          git commit -m "Fix Brodyaga Telegram booking date and time"
-          git push
+      - run: echo "Legacy workflow disabled"
