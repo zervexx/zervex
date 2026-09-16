@@ -1,4 +1,4 @@
-import { CLIENTS, getClient, publicClient } from "./clients.js";
+import { CLIENTS, getClient, publicClient, findService, isAllowedSlot } from "./clients.js";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -146,9 +146,66 @@ async function handleTelegram(env, update) {
   if (text === "/status") return showStatus(env, chatId, null, client);
 }
 
-async function saveBooking(env, body, client) {
+function localDateString(timeZone) {
+  return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+function dateToUtcNumber(date) {
+  const [y, m, d] = date.split("-").map(Number);
+  return Date.UTC(y, m - 1, d);
+}
+
+function minutesFromTime(time) {
+  const m = String(time || "").match(/^(\d{2}):(\d{2})$/);
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (h > 23 || min > 59) return null;
+  return h * 60 + min;
+}
+
+function validateBooking(client, serviceName, date, time) {
+  const service = findService(client, serviceName);
+  if (!service) return { ok: false, error: "Выбранная услуга недоступна" };
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return { ok: false, error: "Некорректная дата" };
+  const dateNumber = dateToUtcNumber(date);
+  const parsed = new Date(dateNumber);
+  if (Number.isNaN(parsed.getTime()) || parsed.toISOString().slice(0, 10) !== date) return { ok: false, error: "Некорректная дата" };
+
+  const weekday = parsed.getUTCDay() || 7;
+  if (!client.booking?.workingDays?.includes(weekday)) return { ok: false, error: "В этот день записи нет" };
+
+  const slotMinutes = minutesFromTime(time);
+  const startMinutes = minutesFromTime(client.booking?.workingHours?.start);
+  const endMinutes = minutesFromTime(client.booking?.workingHours?.end);
+  if (slotMinutes === null || startMinutes === null || endMinutes === null) return { ok: false, error: "Некорректное время" };
+  if (!isAllowedSlot(client, time)) return { ok: false, error: "Это время недоступно для записи" };
+  if (slotMinutes < startMinutes || slotMinutes >= endMinutes) return { ok: false, error: "Это время недоступно для записи" };
+
+  const interval = Number(client.booking?.slotIntervalMinutes || 30);
+  if (slotMinutes % interval !== 0) return { ok: false, error: "Некорректный интервал времени" };
+
+  const today = localDateString(client.timezone || "Europe/Riga");
+  const diffDays = Math.round((dateNumber - dateToUtcNumber(today)) / 86400000);
+  if (diffDays < 0) return { ok: false, error: "Нельзя записаться на прошедшую дату" };
+  if (diffDays > Number(client.booking?.maxDaysAhead ?? 30)) return { ok: false, error: "Слишком далеко вперёд для записи" };
+
+  const now = new Date();
+  const currentLocal = new Intl.DateTimeFormat("en-GB", { timeZone: client.timezone || "Europe/Riga", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(now);
+  const parts = Object.fromEntries(currentLocal.map(p => [p.type, p.value]));
+  const currentLocalDate = `${parts.year}-${parts.month}-${parts.day}`;
+  if (date === currentLocalDate) {
+    const currentMinutes = Number(parts.hour) * 60 + Number(parts.minute);
+    if (slotMinutes < currentMinutes + Number(client.booking?.minNoticeMinutes || 0)) return { ok: false, error: "Это время уже слишком близко" };
+  }
+
+  if (slotMinutes + Number(service.duration || 0) > endMinutes) return { ok: false, error: "Услуга не помещается в рабочее время" };
+  return { ok: true, service };
+}
+
+async function saveBooking(env, body, client, service) {
   const id = Math.random().toString(36).slice(2, 8).toUpperCase();
-  const booking = { id, clientId: client.id, service: body.service, date: body.date, time: body.time, name: body.name, contact: body.contact, site: body.site || `${client.name} — ${client.siteUrl}`, status: "pending", createdAt: new Date().toISOString() };
+  const booking = { id, clientId: client.id, service: service.name, serviceId: service.id, price: service.price, duration: service.duration, date: body.date, time: body.time, name: body.name, contact: body.contact, site: body.site || `${client.name} — ${client.siteUrl}`, status: "pending", createdAt: new Date().toISOString() };
   if (env.BOOKINGS) {
     const slotKey = `slot:${client.id}:${booking.date}:${booking.time}`;
     if (await env.BOOKINGS.get(slotKey)) return { conflict: true };
@@ -193,19 +250,24 @@ export default {
       const body = await request.json();
       const client = getClient(env, body.client || DEFAULT_CLIENT);
       if (!client) return json({ ok: false, error: "Клиент не найден" }, 404);
-      const service = String(body.service || "").trim();
+      const serviceName = String(body.service || "").trim();
       const date = String(body.date || "").trim();
       const time = String(body.time || "").trim();
       const name = String(body.name || "").trim();
       const contact = String(body.contact || "").trim();
-      if (!service || !date || !time || !name || !contact) return json({ ok: false, error: "Заполните все поля" }, 400);
+      if (!serviceName || !date || !time || !name || !contact) return json({ ok: false, error: "Заполните все поля" }, 400);
 
-      const result = await saveBooking(env, body, client);
+      const validation = validateBooking(client, serviceName, date, time);
+      if (!validation.ok) return json({ ok: false, error: validation.error }, 400);
+
+      const result = await saveBooking(env, body, client, validation.service);
       if (result.conflict) return json({ ok: false, error: "Это время уже занято" }, 409);
       const b = result.booking;
       const text = [
         `🔔 <b>НОВАЯ ЗАЯВКА — ${escapeHtml(client.name)}</b>`, ``,
         `💈 Услуга: ${escapeHtml(b.service)}`,
+        `💰 Цена: ${escapeHtml(b.price)} ₽`,
+        `⏱ Длительность: ${escapeHtml(b.duration)} мин`,
         `📅 Дата: ${escapeHtml(b.date)}`,
         `🕐 Время: ${escapeHtml(b.time)}`,
         `👤 Имя: ${escapeHtml(b.name)}`,
@@ -219,7 +281,10 @@ export default {
         await env.BOOKINGS.delete(`slot:${client.id}:${b.date}:${b.time}`);
         return json({ ok: false, error: "Не удалось отправить заявку" }, 502);
       }
-      return json({ ok: true, id: b.id, client: client.id });
-    } catch { return json({ ok: false, error: "Некорректный запрос" }, 400); }
+      return json({ ok: true, id: b.id, client: client.id, service: b.service, price: b.price, duration: b.duration });
+    } catch (error) {
+      console.error(error);
+      return json({ ok: false, error: "Некорректный запрос" }, 400);
+    }
   }
 };
