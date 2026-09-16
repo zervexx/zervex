@@ -77,7 +77,7 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
         const d=await r.json().catch(()=>({}));
         if(r.status===409 || d.error==='Это время уже занято'){
           if(button){button.disabled=false;button.textContent='Отправить запись';}
-          alert('Это время уже занято. Выберите другое время.');
+          alert('Время уже забронировано. Выберите другое время.');
           return;
         }
         if(!r.ok||!d.ok) throw new Error(d.error||'Ошибка отправки');
