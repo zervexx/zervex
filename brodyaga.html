@@ -33,101 +33,63 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
 
 
 
-<!-- VEX_BOOKING_TELEGRAM_CONNECT_V5 -->
-<script>
-(function(){
+
+
+
+
+
+
+
+
+
+
+<script id="vex-booking-final-handler">
+(()=>{
   const API='https://vex-booking.zervex52.workers.dev/';
-  document.addEventListener('submit',async function(e){
-    const form=e.target;
-    if(!form || form.id!=='vexForm') return;
-    e.preventDefault(); e.stopImmediatePropagation();
-    const name=(document.getElementById('vexName')?.value||'').trim();
-    const contact=(document.getElementById('vexContact')?.value||'').trim();
-    const box=document.querySelector('#bookingContent .vex-summary');
-    const service=(box?.querySelector('b')?.textContent||'').trim();
-    const textNodes=box?[...box.childNodes].filter(n=>n.nodeType===3).map(n=>n.textContent.trim()).filter(Boolean):[];
-    const details=textNodes.join(' ');
-    const pieces=details.split('·').map(x=>x.trim());
-    const date=pieces[0]||'';
-    const time=pieces[1]||'';
-    if(!service||!date||!time||!name||!contact){alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');return;}
-    const b=form.querySelector('button[type=submit]'); if(b){b.disabled=true;b.textContent='Отправляем…';}
-    try{
-      const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
-      const d=await r.json(); if(!r.ok||!d.ok) throw Error(d.error||'send failed');
-      const c=document.getElementById('bookingContent');
-      if(c)c.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', заявка на '+date+' в '+time+' получена.<br>Администратор свяжется с вами для подтверждения.</p></div>';
-    }catch(err){if(b){b.disabled=false;b.textContent='Отправить запись';}if(err && err.message === 'SLOT_BUSY'){
-        alert('Это время уже занято. Выберите другое время.');
+  const root=document.getElementById('bookingContent');
+  if(!root) return;
+
+  function install(){
+    const form=document.getElementById('vexForm');
+    if(!form || form.dataset.vexFinal==='1') return;
+    form.dataset.vexFinal='1';
+    form.addEventListener('submit',async e=>{
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      const name=(document.getElementById('vexName')?.value||'').trim();
+      const contact=(document.getElementById('vexContact')?.value||'').trim();
+      const summary=form.querySelector('.vex-summary');
+      const text=(summary?.textContent||'').replace(/\s+/g,' ').trim();
+      const service=(summary?.querySelector('b')?.textContent||'').trim();
+      const m=text.match(/(20\d{2}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
+      const date=m?.[1]||'';
+      const time=m?.[2]||'';
+      if(!service||!date||!time||!name||!contact){
+        alert('Проверьте дату, время, имя и контакт.');
         return;
       }
-      alert('Не удалось отправить заявку. Попробуйте ещё раз.');console.error(err);}
-  },true);
-})();
-</script>
-
-
-
-
-
-
-
-
-<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->
-<script>
-(function(){
-  const API='https://vex-booking.zervex52.workers.dev/';
-  const esc=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-
-  document.addEventListener('submit',async function(e){
-    const form=e.target;
-    if(!form || form.id!=='vexForm') return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-
-    const name=(document.getElementById('vexName')?.value||'').trim();
-    const contact=(document.getElementById('vexContact')?.value||'').trim();
-    const summary=document.querySelector('#bookingContent .vex-summary');
-    const text=(summary?.innerText||'').replace(/\u00a0/g,' ').trim();
-    const service=(text.split(/\r?\n/)[0]||'').trim();
-    const match=text.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
-    const date=match ? match[1] : '';
-    const time=match ? match[2] : '';
-
-    if(!service || !date || !time || !name || !contact){
-      alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');
-      return;
-    }
-
-    const button=form.querySelector('button[type="submit"]');
-    if(button){button.disabled=true;button.textContent='Отправляем…'}
-
-    try{
-      const r=await fetch(API,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})
-      });
-      const data=await r.json().catch(()=>({}));
-
-      if(r.status===409 || data.error==='Это время уже занято'){
-        if(button){button.disabled=false;button.textContent='Отправить запись'}
-        alert('Это время уже занято. Выберите другое время.');
-        return;
+      const button=form.querySelector('button[type=submit]');
+      if(button){button.disabled=true;button.textContent='Отправляем…';}
+      try{
+        const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})});
+        const d=await r.json().catch(()=>({}));
+        if(r.status===409 || d.error==='Это время уже занято'){
+          if(button){button.disabled=false;button.textContent='Отправить запись';}
+          alert('Это время уже занято. Выберите другое время.');
+          return;
+        }
+        if(!r.ok||!d.ok) throw new Error(d.error||'Ошибка отправки');
+        root.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', мы получили запрос на '+date+' в '+time+'.<br>Администратор свяжется с вами для подтверждения.</p></div>';
+      }catch(err){
+        if(button){button.disabled=false;button.textContent='Отправить запись';}
+        console.error(err);
+        alert('Не удалось отправить заявку. Попробуйте ещё раз.');
       }
+    },true);
+  }
 
-      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
-
-      const content=document.getElementById('bookingContent');
-      if(content){
-        content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+esc(name)+', мы получили запрос на '+esc(date)+' в '+esc(time)+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>';
-      }
-    }catch(err){
-      if(button){button.disabled=false;button.textContent='Отправить запись'}
-      alert('Не удалось отправить заявку. Попробуйте ещё раз.');
-      console.error(err);
-    }
-  },true);
+  new MutationObserver(install).observe(root,{childList:true,subtree:true});
+  install();
 })();
 </script>
 </body></html>
