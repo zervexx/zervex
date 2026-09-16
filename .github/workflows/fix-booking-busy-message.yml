@@ -20,15 +20,16 @@ jobs:
           p = Path('brodyaga.html')
           s = p.read_text(encoding='utf-8')
 
-          old = """    }catch(err){\n      if(button){button.disabled=false;button.textContent='Отправить запись'}\n      alert('Не удалось отправить заявку. Попробуйте ещё раз.');\n      console.error(err);\n    }"""
-          new = """    }catch(err){\n      if(button){button.disabled=false;button.textContent='Отправить запись'}\n      if(err && err.message === 'SLOT_BUSY'){\n        alert('Это время уже занято. Выберите другое время.');\n        return;\n      }\n      alert('Не удалось отправить заявку. Попробуйте ещё раз.');\n      console.error(err);\n    }"""
-          if old in s:
-              s = s.replace(old, new, 1)
+          # Handle every booking submit handler in the page.
+          s = s.replace(
+              "if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');",
+              "if(r.status===409 || data.error==='Это время уже занято') throw new Error('SLOT_BUSY');\n      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');"
+          )
 
-          old2 = """      const data=await r.json().catch(()=>({}));\n      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');"""
-          new2 = """      const data=await r.json().catch(()=>({}));\n      if(r.status===409 || data.error==='Это время уже занято') throw new Error('SLOT_BUSY');\n      if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');"""
-          if old2 in s:
-              s = s.replace(old2, new2, 1)
+          s = s.replace(
+              "alert('Не удалось отправить заявку. Попробуйте ещё раз.');",
+              "if(err && err.message === 'SLOT_BUSY'){\n        alert('Это время уже занято. Выберите другое время.');\n        return;\n      }\n      alert('Не удалось отправить заявку. Попробуйте ещё раз.');"
+          )
 
           p.write_text(s, encoding='utf-8')
           PY
