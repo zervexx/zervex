@@ -71,6 +71,7 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
 
 
 
+
 <!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->
 <script>
 (function(){
@@ -87,10 +88,6 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
     const contact=(document.getElementById('vexContact')?.value||'').trim();
     const summary=document.querySelector('#bookingContent .vex-summary');
     const text=(summary?.innerText||'').replace(/\u00a0/g,' ').trim();
-
-    // The booking summary is rendered as:
-    // service name
-    // YYYY-MM-DD · HH:MM
     const service=(text.split(/\r?\n/)[0]||'').trim();
     const match=text.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
     const date=match ? match[1] : '';
@@ -108,16 +105,16 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
       const r=await fetch(API,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({
-          service,
-          date,
-          time,
-          name,
-          contact,
-          site:'БРОДЯГА — zervexx.github.io/zervex'
-        })
+        body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})
       });
       const data=await r.json().catch(()=>({}));
+
+      if(r.status===409 || data.error==='Это время уже занято'){
+        if(button){button.disabled=false;button.textContent='Отправить запись'}
+        alert('Это время уже занято. Выберите другое время.');
+        return;
+      }
+
       if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
 
       const content=document.getElementById('bookingContent');
