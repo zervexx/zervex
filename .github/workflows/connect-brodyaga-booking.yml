@@ -23,19 +23,9 @@ jobs:
           p = Path('brodyaga.html')
           s = p.read_text(encoding='utf-8')
 
-          # Remove the previous integration block so only one submit handler remains.
-          s = re.sub(
-              r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V1 -->.*?</script>',
-              '',
-              s,
-              flags=re.S,
-          )
-          s = re.sub(
-              r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->.*?</script>',
-              '',
-              s,
-              flags=re.S,
-          )
+          # Remove old integration blocks so only one submit handler remains.
+          s = re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V1 -->.*?</script>', '', s, flags=re.S)
+          s = re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->.*?</script>', '', s, flags=re.S)
 
           patch = r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->
           <script>
@@ -53,10 +43,6 @@ jobs:
               const contact=(document.getElementById('vexContact')?.value||'').trim();
               const summary=document.querySelector('#bookingContent .vex-summary');
               const text=(summary?.innerText||'').replace(/\u00a0/g,' ').trim();
-
-              // The booking summary is rendered as:
-              // service name
-              // YYYY-MM-DD · HH:MM
               const service=(text.split(/\r?\n/)[0]||'').trim();
               const match=text.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
               const date=match ? match[1] : '';
@@ -74,16 +60,16 @@ jobs:
                 const r=await fetch(API,{
                   method:'POST',
                   headers:{'Content-Type':'application/json'},
-                  body:JSON.stringify({
-                    service,
-                    date,
-                    time,
-                    name,
-                    contact,
-                    site:'БРОДЯГА — zervexx.github.io/zervex'
-                  })
+                  body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})
                 });
                 const data=await r.json().catch(()=>({}));
+
+                if(r.status===409 || data.error==='Это время уже занято'){
+                  if(button){button.disabled=false;button.textContent='Отправить запись'}
+                  alert('Это время уже занято. Выберите другое время.');
+                  return;
+                }
+
                 if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
 
                 const content=document.getElementById('bookingContent');
@@ -109,5 +95,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add brodyaga.html
           git diff --cached --quiet && exit 0
-          git commit -m "Fix Brodyaga booking date and time payload"
+          git commit -m "Fix Brodyaga booking occupied slot handling"
+          git pull --rebase origin main
           git push
