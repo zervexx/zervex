@@ -57,7 +57,11 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
       const d=await r.json(); if(!r.ok||!d.ok) throw Error(d.error||'send failed');
       const c=document.getElementById('bookingContent');
       if(c)c.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', заявка на '+date+' в '+time+' получена.<br>Администратор свяжется с вами для подтверждения.</p></div>';
-    }catch(err){if(b){b.disabled=false;b.textContent='Отправить запись';}alert('Не удалось отправить заявку. Попробуйте ещё раз.');console.error(err);}
+    }catch(err){if(b){b.disabled=false;b.textContent='Отправить запись';}if(err && err.message === 'SLOT_BUSY'){
+        alert('Это время уже занято. Выберите другое время.');
+        return;
+      }
+      alert('Не удалось отправить заявку. Попробуйте ещё раз.');console.error(err);}
   },true);
 })();
 </script>
@@ -112,6 +116,7 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
         })
       });
       const data=await r.json().catch(()=>({}));
+      if(r.status===409 || data.error==='Это время уже занято') throw new Error('SLOT_BUSY');
       if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
 
       const content=document.getElementById('bookingContent');
@@ -120,6 +125,10 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
       }
     }catch(err){
       if(button){button.disabled=false;button.textContent='Отправить запись'}
+      if(err && err.message === 'SLOT_BUSY'){
+        alert('Это время уже занято. Выберите другое время.');
+        return;
+      }
       alert('Не удалось отправить заявку. Попробуйте ещё раз.');
       console.error(err);
     }
