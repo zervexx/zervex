@@ -1,0 +1,63 @@
+name: Fix Telegram routing
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/fix-telegram-routing.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Restore Brodyaga fallback routing
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('vex-booking-api/worker.js')
+          s = p.read_text(encoding='utf-8')
+          old = '''function resolveTelegramClient(env, chatId) {
+            for (const id of Object.keys(CLIENTS)) {
+              const client = getClient(env, id);
+              if (client && client.telegramChatId && String(chatId) === String(client.telegramChatId)) return client;
+            }
+            return null;
+          }'''
+          new = '''function resolveTelegramClient(env, chatId) {
+            // Keep the original Brodyaga bot working even if its chat ID is only
+            // available through the legacy TELEGRAM_CHAT_ID secret.
+            const brodyaga = getClient(env, DEFAULT_CLIENT);
+            const legacyChatId = env.TELEGRAM_CHAT_ID || brodyaga?.telegramChatId;
+            if (brodyaga && legacyChatId && String(chatId) === String(legacyChatId)) return brodyaga;
+
+            for (const id of Object.keys(CLIENTS)) {
+              if (id === DEFAULT_CLIENT) continue;
+              const client = getClient(env, id);
+              if (client && client.telegramChatId && String(chatId) === String(client.telegramChatId)) return client;
+            }
+
+            // The Brodyaga webhook historically served only one bot. If Telegram
+            // delivers an update with a missing/mismatched legacy chat ID, keep
+            // that webhook functional instead of silently dropping the update.
+            return brodyaga || null;
+          }'''
+          if old not in s:
+              raise SystemExit('target function not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+
+      - name: Commit fix
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add vex-booking-api/worker.js
+          git diff --cached --quiet && exit 0
+          git commit -m 'fix: restore Brodyaga Telegram routing'
+          git push
