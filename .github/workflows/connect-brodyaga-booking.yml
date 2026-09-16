@@ -1,100 +1,13 @@
 name: Connect Brodyaga Booking to Telegram
 
 on:
-  push:
-    branches: [main]
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  patch:
+  disabled:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Fix booking Telegram integration
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          import re
-
-          p = Path('brodyaga.html')
-          s = p.read_text(encoding='utf-8')
-
-          # Remove old integration blocks so only one submit handler remains.
-          s = re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V1 -->.*?</script>', '', s, flags=re.S)
-          s = re.sub(r'<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->.*?</script>', '', s, flags=re.S)
-
-          patch = r'''<!-- VEX_BOOKING_TELEGRAM_CONNECT_V2 -->
-          <script>
-          (function(){
-            const API='https://vex-booking.zervex52.workers.dev/';
-            const esc=v=>String(v||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
-
-            document.addEventListener('submit',async function(e){
-              const form=e.target;
-              if(!form || form.id!=='vexForm') return;
-              e.preventDefault();
-              e.stopImmediatePropagation();
-
-              const name=(document.getElementById('vexName')?.value||'').trim();
-              const contact=(document.getElementById('vexContact')?.value||'').trim();
-              const summary=document.querySelector('#bookingContent .vex-summary');
-              const text=(summary?.innerText||'').replace(/\u00a0/g,' ').trim();
-              const service=(text.split(/\r?\n/)[0]||'').trim();
-              const match=text.match(/(\d{4}-\d{2}-\d{2})\s*[·•]\s*(\d{2}:\d{2})/);
-              const date=match ? match[1] : '';
-              const time=match ? match[2] : '';
-
-              if(!service || !date || !time || !name || !contact){
-                alert('Не удалось получить данные записи. Вернитесь назад и выберите дату и время ещё раз.');
-                return;
-              }
-
-              const button=form.querySelector('button[type="submit"]');
-              if(button){button.disabled=true;button.textContent='Отправляем…'}
-
-              try{
-                const r=await fetch(API,{
-                  method:'POST',
-                  headers:{'Content-Type':'application/json'},
-                  body:JSON.stringify({service,date,time,name,contact,site:'БРОДЯГА — zervexx.github.io/zervex'})
-                });
-                const data=await r.json().catch(()=>({}));
-
-                if(r.status===409 || data.error==='Это время уже занято'){
-                  if(button){button.disabled=false;button.textContent='Отправить запись'}
-                  alert('Это время уже занято. Выберите другое время.');
-                  return;
-                }
-
-                if(!r.ok || !data.ok) throw new Error(data.error||'Ошибка отправки');
-
-                const content=document.getElementById('bookingContent');
-                if(content){
-                  content.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+esc(name)+', мы получили запрос на '+esc(date)+' в '+esc(time)+'.<br>Администратор свяжется с вами для подтверждения.</p><a class="vex-link" href="tel:+79991234567">Позвонить в БРОДЯГУ</a></div>';
-                }
-              }catch(err){
-                if(button){button.disabled=false;button.textContent='Отправить запись'}
-                alert('Не удалось отправить заявку. Попробуйте ещё раз.');
-                console.error(err);
-              }
-            },true);
-          })();
-          </script>'''
-
-          s = s.replace('</body>', patch + '\n</body>')
-          p.write_text(s, encoding='utf-8')
-          PY
-
-      - name: Commit patch
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add brodyaga.html
-          git diff --cached --quiet && exit 0
-          git commit -m "Fix Brodyaga booking occupied slot handling"
-          git pull --rebase origin main
-          git push
+      - run: echo "Legacy workflow disabled"
