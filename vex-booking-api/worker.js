@@ -340,7 +340,7 @@ export default {
       if (!tgResult.ok && env.BOOKINGS) {
         await env.BOOKINGS.delete(`booking:${client.id}:${b.id}`);
         await env.BOOKINGS.delete(`slot:${client.id}:${b.date}:${b.time}`);
-        return json({ ok: false, error: "Не удалось отправить заявку" }, 502);
+        return json({ ok: false, error: `Не удалось отправить заявку: ${tgResult.description || tgResult.error_code || "Telegram API error"}` }, 502);
       }
       return json({ ok: true, id: b.id, client: client.id, bookingType: b.bookingType, guests: b.guests || null });
     } catch (error) {

@@ -126,7 +126,7 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
         }catch(err){
           if(button){button.disabled=false;button.textContent='Отправить запись';}
           console.error(err);
-          alert('Не удалось отправить заявку. Попробуйте ещё раз.');
+          alert(err?.message || 'Не удалось отправить заявку. Попробуйте ещё раз.');
         }
       },true);
     }
