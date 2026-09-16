@@ -1,0 +1,28 @@
+name: Telegram webhook diagnostics
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diagnostics:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Worker endpoint
+        run: |
+          set -e
+          curl -fsS "https://vex-booking.zervex52.workers.dev/" | tee /tmp/worker.json
+          echo
+      - name: Check Telegram webhook configuration
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: |
+          set -e
+          if [ -z "$TELEGRAM_BOT_TOKEN" ]; then
+            echo "TELEGRAM_BOT_TOKEN secret is missing"
+            exit 1
+          fi
+          curl -fsS "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getWebhookInfo" | tee /tmp/webhook.json
+          echo
