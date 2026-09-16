@@ -108,11 +108,22 @@ async function showStatus(env, chatId, messageId, client) {
 }
 
 function resolveTelegramClient(env, chatId) {
+  // Keep the original Brodyaga bot working even if its chat ID is only
+  // available through the legacy TELEGRAM_CHAT_ID secret.
+  const brodyaga = getClient(env, DEFAULT_CLIENT);
+  const legacyChatId = env.TELEGRAM_CHAT_ID || brodyaga?.telegramChatId;
+  if (brodyaga && legacyChatId && String(chatId) === String(legacyChatId)) return brodyaga;
+
   for (const id of Object.keys(CLIENTS)) {
+    if (id === DEFAULT_CLIENT) continue;
     const client = getClient(env, id);
     if (client && client.telegramChatId && String(chatId) === String(client.telegramChatId)) return client;
   }
-  return null;
+
+  // The Brodyaga webhook historically served only one bot. If Telegram
+  // delivers an update with a missing/mismatched legacy chat ID, keep
+  // that webhook functional instead of silently dropping the update.
+  return brodyaga || null;
 }
 
 async function handleTelegram(env, update) {
