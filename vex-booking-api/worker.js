@@ -376,6 +376,7 @@ async function saveBooking(env, body, client, validation) {
   const booking = {
     id,
     clientId: client.id,
+    statusToken: Array.from(crypto.getRandomValues(new Uint8Array(24)), byte => byte.toString(16).padStart(2, "0")).join(""),
     bookingType: validation.bookingType,
     service: restaurant ? "Бронирование столика" : validation.service.name,
     serviceId: restaurant ? "table" : validation.service.id,
@@ -395,6 +396,7 @@ async function saveBooking(env, body, client, validation) {
     const slotKey = `slot:${client.id}:${booking.date}:${booking.time}`;
     if (await env.BOOKINGS.get(slotKey)) return { conflict: true };
     await env.BOOKINGS.put(`booking:${client.id}:${id}`, JSON.stringify(booking));
+    await env.BOOKINGS.put(`status:${client.id}:${booking.statusToken}`, id);
     await env.BOOKINGS.put(slotKey, id);
   }
   return { booking };
@@ -429,6 +431,26 @@ export default {
         } while (cursor);
       }
       return json({ ok: true, client: client.id, date, busy: [...busy].sort() });
+    }
+
+    if (request.method === "GET" && url.pathname === "/booking-status") {
+      const client = getClient(env, url.searchParams.get("client") || DEFAULT_CLIENT);
+      if (!client) return json({ ok: false, error: "Клиент не найден" }, 404);
+      const token = String(url.searchParams.get("token") || "");
+      if (!/^[a-f0-9]{48}$/.test(token)) return json({ ok: false, error: "Ссылка недействительна" }, 404);
+      if (!env.BOOKINGS) return json({ ok: false, error: "Хранилище временно недоступно" }, 503);
+      const bookingId = await env.BOOKINGS.get(`status:${client.id}:${token}`);
+      if (!bookingId) return json({ ok: false, error: "Запись не найдена" }, 404);
+      const booking = await env.BOOKINGS.get(`booking:${client.id}:${bookingId}`, "json");
+      if (!booking || booking.statusToken !== token) return json({ ok: false, error: "Запись не найдена" }, 404);
+      return json({
+        ok: true,
+        status: booking.status || "pending",
+        date: booking.date,
+        time: booking.time,
+        service: booking.service,
+        name: booking.name
+      });
     }
 
     if (request.method === "GET" && url.pathname === "/config") {
@@ -483,7 +505,8 @@ export default {
         await env.BOOKINGS.delete(`slot:${client.id}:${b.date}:${b.time}`);
         return json({ ok: false, error: `Не удалось отправить заявку: ${tgResult.description || tgResult.error_code || "Telegram API error"}` }, 502);
       }
-      return json({ ok: true, id: b.id, client: client.id, bookingType: b.bookingType, guests: b.guests || null });
+      const statusUrl = `https://zervexx.github.io/zervex/booking-status.html?client=${encodeURIComponent(client.id)}&token=${b.statusToken}`;
+      return json({ ok: true, id: b.id, client: client.id, bookingType: b.bookingType, guests: b.guests || null, statusUrl });
     } catch (error) {
       console.error(error);
       return json({ ok: false, error: "Некорректный запрос" }, 400);
