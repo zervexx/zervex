@@ -195,7 +195,7 @@ html{scroll-padding-top:92px;overscroll-behavior-y:none}.booking-modal{position:
             return;
           }
           if(!r.ok||!d.ok)throw new Error(d.error||'Ошибка отправки');
-          root.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', мы получили запрос на '+date+' в '+time+'.<br>Администратор свяжется с вами для подтверждения.</p></div>';
+          root.innerHTML='<div class="vex-success"><div class="vex-success-mark">✓</div><h3>Заявка отправлена</h3><p>'+name+', мы получили запрос на '+date+' в '+time+'.<br>Сохрани ссылку ниже — по ней можно проверить статус записи.</p><a class="vex-link" href="'+d.statusUrl+'" target="_blank" rel="noopener">Проверить статус записи</a></div>';
         }catch(err){
           if(button){button.disabled=false;button.textContent='Отправить запись';}
           console.error(err);
