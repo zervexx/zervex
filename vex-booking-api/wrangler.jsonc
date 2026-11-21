@@ -2,5 +2,11 @@
   "$schema": "https://developers.cloudflare.com/workers/wrangler/config-schema.json",
   "name": "vex-booking",
   "main": "./worker.js",
-  "compatibility_date": "2026-09-16"
+  "compatibility_date": "2026-09-16",
+  "kv_namespaces": [
+    {
+      "binding": "BOOKINGS",
+      "id": "e8dee5b316e5459abfa72b602e11d862"
+    }
+  ]
 }
