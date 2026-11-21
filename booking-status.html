@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111315">
+  <title>Статус записи — БРОДЯГА</title>
+  <style>
+    *{box-sizing:border-box}
+    body{margin:0;min-height:100vh;background:#111315;color:#f0f1f2;font-family:Arial,Helvetica,sans-serif;display:grid;place-items:center;padding:24px}
+    .card{width:min(100%,520px);background:#191c1f;border:1px solid #30353a;border-radius:22px;padding:clamp(25px,6vw,42px);box-shadow:0 24px 80px #0005}
+    .brand{font-size:11px;letter-spacing:.22em;color:#9ca3aa;font-weight:800}
+    h1{font-size:clamp(26px,6vw,36px);margin:20px 0 10px}
+    .muted{color:#aab0b6;line-height:1.6}
+    .status{display:flex;align-items:center;gap:13px;margin:28px 0 22px;padding:17px;border-radius:14px;background:#24292d;border:1px solid #3a4147}
+    .dot{width:12px;height:12px;border-radius:50%;background:#e8b65c;box-shadow:0 0 0 5px #e8b65c22;flex:none}
+    .status.confirmed .dot{background:#71ce91;box-shadow:0 0 0 5px #71ce9122}
+    .status.rejected .dot{background:#ed7777;box-shadow:0 0 0 5px #ed777722}
+    .status strong{display:block;font-size:16px}
+    .details{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .detail{padding:14px;background:#222629;border-radius:12px;min-width:0}
+    .detail span{display:block;color:#929aa1;font-size:11px;text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px}
+    .detail b{font-size:14px;overflow-wrap:anywhere}
+    .foot{font-size:12px;color:#858d94;margin-top:24px;line-height:1.6}
+    .error{color:#f0a0a0}
+    a{color:#e7e9eb}
+    @media(max-width:420px){.details{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <div class="brand">БРОДЯГА / BOOKING</div>
+    <h1>Статус записи</h1>
+    <p class="muted" id="intro">Проверяем информацию о вашей записи…</p>
+    <div class="status" id="statusBox">
+      <i class="dot"></i>
+      <div><strong id="statusTitle">Загружаем статус</strong><span class="muted" id="statusText">Это займёт пару секунд</span></div>
+    </div>
+    <div class="details" id="details" hidden>
+      <div class="detail"><span>Дата</span><b id="date">—</b></div>
+      <div class="detail"><span>Время</span><b id="time">—</b></div>
+      <div class="detail" style="grid-column:1/-1"><span>Услуга</span><b id="service">—</b></div>
+    </div>
+    <p class="foot" id="foot">Статус обновляется автоматически. Ссылка персональная — не пересылайте её посторонним.</p>
+  </main>
+  <script>
+    (() => {
+      const API = 'https://vex-booking.zervex52.workers.dev/booking-status';
+      const params = new URLSearchParams(location.search);
+      const client = params.get('client') || '';
+      const token = params.get('token') || '';
+      const box = document.getElementById('statusBox');
+      const title = document.getElementById('statusTitle');
+      const message = document.getElementById('statusText');
+      const intro = document.getElementById('intro');
+      const foot = document.getElementById('foot');
+      const details = document.getElementById('details');
+      let timer = null;
+
+      function showError(text) {
+        box.className = 'status rejected';
+        title.textContent = 'Не удалось найти запись';
+        message.textContent = text;
+        intro.textContent = 'Проверьте, что вы открыли полную ссылку из сообщения после бронирования.';
+        foot.textContent = 'Если ссылка не открывается, свяжитесь с администрацией.';
+        if (timer) clearInterval(timer);
+      }
+
+      async function refresh() {
+        try {
+          const response = await fetch(API + '?client=' + encodeURIComponent(client) + '&token=' + encodeURIComponent(token), {cache:'no-store'});
+          const data = await response.json();
+          if (!response.ok || !data.ok) throw new Error(data.error || 'Ссылка недействительна');
+          details.hidden = false;
+          document.getElementById('date').textContent = data.date || '—';
+          document.getElementById('time').textContent = data.time || '—';
+          document.getElementById('service').textContent = data.service || '—';
+          box.className = 'status ' + (data.status || 'pending');
+          if (data.status === 'confirmed') {
+            title.textContent = 'Запись подтверждена';
+            message.textContent = 'Ждём вас в назначенное время!';
+            intro.textContent = 'Отлично, администратор подтвердил вашу запись.';
+          } else if (data.status === 'rejected') {
+            title.textContent = 'Запись отклонена';
+            message.textContent = 'Пожалуйста, свяжитесь с нами, чтобы выбрать другое время.';
+            intro.textContent = 'К сожалению, администратор не смог подтвердить эту запись.';
+            if (timer) clearInterval(timer);
+          } else {
+            title.textContent = 'Ожидает подтверждения';
+            message.textContent = 'Администратор ещё не обработал заявку.';
+            intro.textContent = 'Заявка получена. Как только статус изменится, вы увидите это здесь.';
+          }
+        } catch (error) {
+          showError(error.message || 'Ошибка загрузки');
+        }
+      }
+
+      if (!client || !/^[a-f0-9]{48}$/.test(token)) {
+        showError('В ссылке отсутствуют необходимые данные.');
+        return;
+      }
+      refresh();
+      timer = setInterval(refresh, 12000);
+    })();
+  </script>
+</body>
+</html>
