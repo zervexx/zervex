@@ -67,16 +67,17 @@ function bookingLabel(b) {
 
 function fmtBooking(b) {
   const lines = [
-    `<b>${escapeHtml(bookingLabel(b))}</b>`,
-    `📅 ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")}`
+    "<b>👤 КЛИЕНТ</b>\n" + escapeHtml(b.name || "—"),
+    "<b>📅 ДАТА И ВРЕМЯ</b>\n" + formatDateRu(b.date) + " · " + escapeHtml(b.time || "—"),
+    "<b>🧾 УСЛУГА</b>\n" + escapeHtml(bookingLabel(b))
   ];
-  if (b.bookingType === "restaurant") lines.push(`👥 Гостей: <b>${escapeHtml(b.guests || "—")}</b>`);
-  lines.push(`👤 ${escapeHtml(b.name || "—")}`, `📞 ${escapeHtml(b.contact || "—")}`);
-  if (b.comment) lines.push(`💬 ${escapeHtml(b.comment)}`);
-  lines.push(`🌐 ${escapeHtml(b.site || "—")}`, `\nСтатус: <b>${escapeHtml(b.status || "pending")}</b>`);
-  return lines.join("\n");
+  if (b.bookingType === "restaurant") lines.push("<b>👥 ГОСТИ</b>\n" + escapeHtml(b.guests || "—"));
+  lines.push("<b>📞 КОНТАКТ</b>\n" + escapeHtml(b.contact || "—"));
+  if (b.comment) lines.push("<b>💬 КОММЕНТАРИЙ</b>\n" + escapeHtml(b.comment));
+  lines.push("<b>🌐 САЙТ</b>\n" + escapeHtml(b.site || "—"));
+  lines.push("<b>СТАТУС</b>\n" + statusLabel(b.status));
+  return lines.join("\n\n");
 }
-
 async function listBookings(env, clientId) {
   if (!env.BOOKINGS) return [];
   const result = await env.BOOKINGS.list({ prefix: `booking:${clientId}:` });
