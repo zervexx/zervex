@@ -409,12 +409,26 @@ export default {
       const client = getClient(env, url.searchParams.get("client") || DEFAULT_CLIENT);
       if (!client) return json({ ok: false, error: "Клиент не найден" }, 404);
       const date = url.searchParams.get("date") || "";
-      const busy = [];
+      const busy = new Set();
       if (env.BOOKINGS && date) {
-        const result = await env.BOOKINGS.list({ prefix: `slot:${client.id}:${date}:` });
-        for (const key of result.keys || []) busy.push(key.name.split(":").pop());
+        // Booking records are the source of truth. The slot index is only
+        // an optimization and may be missing or temporarily stale.
+        let cursor;
+        do {
+          const page = await env.BOOKINGS.list({
+            prefix: `booking:${client.id}:`,
+            ...(cursor ? { cursor } : {})
+          });
+          for (const key of page.keys || []) {
+            const booking = await env.BOOKINGS.get(key.name, "json");
+            if (booking && booking.date === date && booking.status !== "rejected" && booking.time) {
+              busy.add(String(booking.time).trim());
+            }
+          }
+          cursor = page.list_complete ? undefined : page.cursor;
+        } while (cursor);
       }
-      return json({ ok: true, client: client.id, date, busy });
+      return json({ ok: true, client: client.id, date, busy: [...busy].sort() });
     }
 
     if (request.method === "GET" && url.pathname === "/config") {
