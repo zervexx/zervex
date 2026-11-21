@@ -126,12 +126,12 @@ async function showScheduleForDate(env, chatId, messageId, client, date) {
   const confirmed = day.filter(b => b.status === "confirmed").length;
   const pending = day.filter(b => (b.status || "pending") === "pending").length;
   const text = [
-    `📅 <b>РАСПИСАНИЕ · \${formatDateRu(date)}</b>`,
-    `Всего: <b>\${day.length}</b>  ·  Подтверждено: <b>\${confirmed}</b>  ·  Ожидает: <b>\${pending}</b>`,
+    `📅 <b>РАСПИСАНИЕ · ${formatDateRu(date)}</b>`,
+    `Всего: <b>${day.length}</b>  ·  Подтверждено: <b>${confirmed}</b>  ·  Ожидает: <b>${pending}</b>`,
     "",
     ...(day.length ? day.map(b => [
-      `<b>\${escapeHtml(b.time || "—")}  ·  \${escapeHtml(b.name || "Клиент")}</b>`,
-      `\${escapeHtml(bookingLabel(b))}\${b.bookingType === "restaurant" ? ` · \${escapeHtml(b.guests)} гостей` : ""}`,
+      `<b>${escapeHtml(b.time || "—")}  ·  ${escapeHtml(b.name || "Клиент")}</b>`,
+      `${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""}`,
       statusLabel(b.status)
     ].join("\n")) : ["На эту дату записей пока нет."])
   ].join("\n\n");
@@ -152,11 +152,11 @@ async function showConfirmed(env, chatId, messageId, client) {
   const confirmed = (await listBookings(env, client.id)).filter(b => b.status === "confirmed");
   const text = [
     "✅ <b>ПОДТВЕРЖДЁННЫЕ ЗАПИСИ</b>",
-    `Всего: <b>\${confirmed.length}</b>`,
+    `Всего: <b>${confirmed.length}</b>`,
     "",
     ...(confirmed.length ? confirmed.slice(0, 30).map(b => [
-      `<b>\${formatDateRu(b.date)} · \${escapeHtml(b.time || "—")}</b>`,
-      `\${escapeHtml(b.name || "Клиент")} · \${escapeHtml(bookingLabel(b))}`
+      `<b>${formatDateRu(b.date)} · ${escapeHtml(b.time || "—")}</b>`,
+      `${escapeHtml(b.name || "Клиент")} · ${escapeHtml(bookingLabel(b))}`
     ].join("\n")) : ["Подтверждённых записей пока нет."])
   ].join("\n\n");
   const keyboard = { inline_keyboard: [[{ text: "📅 Сегодня", callback_data: "schedule:today" }, { text: "📅 Завтра", callback_data: "schedule:tomorrow" }], [{ text: "⌂ Главное меню", callback_data: "menu:home" }]] };
