@@ -91,29 +91,70 @@ async function listBookings(env, clientId) {
 async function showBookings(env, chatId, messageId, client) {
   const all = (await listBookings(env, client.id)).filter(b => (b.status || "pending") !== "rejected");
   const pending = all.filter(b => (b.status || "pending") === "pending");
-  let text = `📋 <b>Активные заявки — ${escapeHtml(client.name)}</b>\n\n`;
-  text += all.length ? `Всего: ${all.length}\nОжидают: ${pending.length}\n\n` + all.slice(0, 8).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\n${escapeHtml(bookingLabel(b))} · ${escapeHtml(b.status || "pending")}`).join("\n\n") : "Активных заявок пока нет.";
-  const keyboard = all.length ? { inline_keyboard: all.slice(0, 8).map(b => [{ text: `👤 ${b.name || "Клиент"} · ${b.time || "—"}`, callback_data: `booking:view:${b.id}` }]).concat([[{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }], [{ text: "← Главное меню", callback_data: "menu:home" }]]) } : { inline_keyboard: [[{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] };
-  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+  const confirmed = all.filter(b => b.status === "confirmed");
+  const header = "<b>📋 ЗАПИСИ · " + escapeHtml(client.name).toUpperCase() + "</b>\n";
+  const summary = "Всего: <b>" + all.length + "</b>   ⏳ <b>" + pending.length + "</b>   ✅ <b>" + confirmed.length + "</b>";
+  const cards = all.slice(0, 8).map((b, i) => {
+    const status = b.status === "confirmed" ? "✅ ПОДТВЕРЖДЕНА" : "⏳ ОЖИДАЕТ";
+    return "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+      "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
+      escapeHtml(bookingLabel(b)) + "\n" + status;
+  });
+  const text = header + "\n" + summary + "\n\n" +
+    (cards.length ? cards.join("\n\n──────────────\n\n") : "Пока нет активных записей.");
+  const rows = all.slice(0, 8).map(b => [{
+    text: (b.status === "confirmed" ? "✅ " : "⏳ ") + (b.name || "Клиент") + " · " + (b.time || "—"),
+    callback_data: "booking:view:" + b.id
+  }]);
+  rows.push([{ text: "🗑 Архив отклонённых", callback_data: "menu:rejected" }]);
+  rows.push([{ text: "⌂ Главное меню", callback_data: "menu:home" }]);
+  return tg(env, messageId ? "editMessageText" : "sendMessage", {
+    chat_id: chatId, ...(messageId ? { message_id: messageId } : {}),
+    text, parse_mode: "HTML", reply_markup: { inline_keyboard: rows }
+  }, client);
 }
-
 async function showRejected(env, chatId, messageId, client) {
   const rejected = (await listBookings(env, client.id)).filter(b => b.status === "rejected");
-  const text = rejected.length
-    ? `🗑 <b>Отклонённые заявки — ${escapeHtml(client.name)}</b>\n\n${rejected.slice(0, 20).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\n${escapeHtml(bookingLabel(b))}`).join("\n\n")}`
-    : "🗑 <b>Отклонённые заявки</b>\n\nАрхив пуст.";
-  const keyboard = { inline_keyboard: [[{ text: "📋 Активные заявки", callback_data: "menu:bookings" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] };
-  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+  const cards = rejected.slice(0, 20).map((b, i) =>
+    "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+    "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
+    escapeHtml(bookingLabel(b)) + "\n✕ ОТКЛОНЕНА"
+  );
+  const text = "<b>🗑 АРХИВ · " + escapeHtml(client.name).toUpperCase() + "</b>\n\n" +
+    "Отклонённых заявок: <b>" + rejected.length + "</b>\n\n" +
+    (cards.length ? cards.join("\n\n──────────────\n\n") : "Архив пока пуст.");
+  const keyboard = { inline_keyboard: [
+    [{ text: "📋 Активные записи", callback_data: "menu:bookings" }],
+    [{ text: "⌂ Главное меню", callback_data: "menu:home" }]
+  ]};
+  return tg(env, messageId ? "editMessageText" : "sendMessage", {
+    chat_id: chatId, ...(messageId ? { message_id: messageId } : {}),
+    text, parse_mode: "HTML", reply_markup: keyboard
+  }, client);
 }
-
 async function showPending(env, chatId, messageId, client) {
   const all = await listBookings(env, client.id);
   const pending = all.filter(b => (b.status || "pending") === "pending");
-  const text = pending.length ? `⏳ <b>Ожидают подтверждения</b>\n\n${pending.map((b, i) => `${i + 1}. <b>${escapeHtml(b.name || "Клиент")}</b>\n${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")}\n${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""}`).join("\n\n")}` : "⏳ <b>Ожидают подтверждения</b>\n\nНовых заявок нет.";
-  const keyboard = pending.length ? { inline_keyboard: pending.map(b => [{ text: `📋 ${b.name || "Клиент"}`, callback_data: `booking:view:${b.id}` }]).concat([[{ text: "← Главное меню", callback_data: "menu:home" }]]) } : backKeyboard();
-  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+  const cards = pending.slice(0, 20).map((b, i) =>
+    "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+    "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
+    escapeHtml(bookingLabel(b)) +
+    (b.bookingType === "restaurant" ? " · " + escapeHtml(b.guests) + " гостей" : "") +
+    "\n⏳ ОЖИДАЕТ ПОДТВЕРЖДЕНИЯ"
+  );
+  const text = "<b>⏳ НОВЫЕ ЗАЯВКИ</b>\n\n" +
+    "Нужно обработать: <b>" + pending.length + "</b>\n\n" +
+    (cards.length ? cards.join("\n\n──────────────\n\n") : "Новых заявок нет. Всё обработано.");
+  const rows = pending.slice(0, 20).map(b => [{
+    text: "Открыть · " + (b.name || "Клиент") + " · " + (b.time || "—"),
+    callback_data: "booking:view:" + b.id
+  }]);
+  rows.push([{ text: "⌂ Главное меню", callback_data: "menu:home" }]);
+  return tg(env, messageId ? "editMessageText" : "sendMessage", {
+    chat_id: chatId, ...(messageId ? { message_id: messageId } : {}),
+    text, parse_mode: "HTML", reply_markup: { inline_keyboard: rows }
+  }, client);
 }
-
 function addDaysToDate(date, days) {
   const [y, m, d] = date.split("-").map(Number);
   return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
