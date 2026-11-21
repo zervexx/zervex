@@ -34,7 +34,8 @@ function escapeHtml(value) {
 function mainKeyboard() {
   return { inline_keyboard: [
     [{ text: "📋 Заявки", callback_data: "menu:bookings" }, { text: "⏳ Ожидают", callback_data: "menu:pending" }],
-    [{ text: "📅 Расписание", callback_data: "menu:schedule" }, { text: "⚙️ Бот", callback_data: "menu:status" }]
+    [{ text: "📅 Расписание", callback_data: "menu:schedule" }, { text: "⚙️ Бот", callback_data: "menu:status" }],
+    [{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }]
   ]};
 }
 
@@ -77,11 +78,20 @@ async function listBookings(env, clientId) {
 }
 
 async function showBookings(env, chatId, messageId, client) {
-  const all = await listBookings(env, client.id);
+  const all = (await listBookings(env, client.id)).filter(b => (b.status || "pending") !== "rejected");
   const pending = all.filter(b => (b.status || "pending") === "pending");
-  let text = `📋 <b>Заявки — ${escapeHtml(client.name)}</b>\n\n`;
-  text += all.length ? `Всего: ${all.length}\nОжидают: ${pending.length}\n\n` + all.slice(0, 8).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\n${escapeHtml(bookingLabel(b))} · ${escapeHtml(b.status || "pending")}`).join("\n\n") : "Заявок пока нет.";
-  const keyboard = all.length ? { inline_keyboard: all.slice(0, 8).map(b => [{ text: `👤 ${b.name || "Клиент"} · ${b.time || "—"}`, callback_data: `booking:view:${b.id}` }]).concat([[{ text: "← Главное меню", callback_data: "menu:home" }]]) } : backKeyboard();
+  let text = `📋 <b>Активные заявки — ${escapeHtml(client.name)}</b>\n\n`;
+  text += all.length ? `Всего: ${all.length}\nОжидают: ${pending.length}\n\n` + all.slice(0, 8).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\n${escapeHtml(bookingLabel(b))} · ${escapeHtml(b.status || "pending")}`).join("\n\n") : "Активных заявок пока нет.";
+  const keyboard = all.length ? { inline_keyboard: all.slice(0, 8).map(b => [{ text: `👤 ${b.name || "Клиент"} · ${b.time || "—"}`, callback_data: `booking:view:${b.id}` }]).concat([[{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }], [{ text: "← Главное меню", callback_data: "menu:home" }]]) } : { inline_keyboard: [[{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] };
+  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+}
+
+async function showRejected(env, chatId, messageId, client) {
+  const rejected = (await listBookings(env, client.id)).filter(b => b.status === "rejected");
+  const text = rejected.length
+    ? `🗑 <b>Отклонённые заявки — ${escapeHtml(client.name)}</b>\n\n${rejected.slice(0, 20).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\n${escapeHtml(bookingLabel(b))}`).join("\n\n")}`
+    : "🗑 <b>Отклонённые заявки</b>\n\nАрхив пуст.";
+  const keyboard = { inline_keyboard: [[{ text: "📋 Активные заявки", callback_data: "menu:bookings" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] };
   return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
 }
 
@@ -140,6 +150,7 @@ async function handleTelegram(env, update) {
     const messageId = callback.message.message_id;
     if (data === "menu:home") return tg(env, "editMessageText", { chat_id: chatId, message_id: messageId, text: `💼 <b>${escapeHtml(client.name)}</b>\n\nПанель управления бронированиями\n\nВыберите раздел:`, parse_mode: "HTML", reply_markup: mainKeyboard() }, client);
     if (data === "menu:bookings") return showBookings(env, chatId, messageId, client);
+    if (data === "menu:rejected") return showRejected(env, chatId, messageId, client);
     if (data === "menu:pending") return showPending(env, chatId, messageId, client);
     if (data === "menu:schedule") return showSchedule(env, chatId, messageId, client);
     if (data === "menu:status") return showStatus(env, chatId, messageId, client);
@@ -157,8 +168,11 @@ async function handleTelegram(env, update) {
       b.status = action === "accept" ? "confirmed" : "rejected";
       await env.BOOKINGS.put(key, JSON.stringify(b));
       if (action === "reject" && b.date && b.time) await env.BOOKINGS.delete(`slot:${client.id}:${b.date}:${b.time}`);
-      const resultText = action === "accept" ? `✅ <b>Бронирование подтверждено</b>\n\n${fmtBooking(b)}` : `✕ <b>Бронирование отклонено</b>\n\n${fmtBooking(b)}`;
-      return tg(env, "editMessageText", { chat_id: chatId, message_id: messageId, text: resultText, parse_mode: "HTML", reply_markup: backKeyboard() }, client);
+      const resultText = action === "accept" ? `✅ <b>Бронирование подтверждено</b>\n\n${fmtBooking(b)}` : `✕ <b>Бронирование отклонено и перемещено в архив</b>\n\n${fmtBooking(b)}`;
+      const resultKeyboard = action === "reject"
+        ? { inline_keyboard: [[{ text: "📋 Активные заявки", callback_data: "menu:bookings" }], [{ text: "🗑 Архив отклонённых", callback_data: "menu:rejected" }]] }
+        : backKeyboard();
+      return tg(env, "editMessageText", { chat_id: chatId, message_id: messageId, text: resultText, parse_mode: "HTML", reply_markup: resultKeyboard }, client);
     }
     return;
   }
