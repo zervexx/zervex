@@ -34,8 +34,10 @@ function escapeHtml(value) {
 function mainKeyboard() {
   return { inline_keyboard: [
     [{ text: "📋 Заявки", callback_data: "menu:bookings" }, { text: "⏳ Ожидают", callback_data: "menu:pending" }],
-    [{ text: "📅 Расписание", callback_data: "menu:schedule" }, { text: "⚙️ Бот", callback_data: "menu:status" }],
-    [{ text: "🗑 Отклонённые", callback_data: "menu:rejected" }]
+    [{ text: "📅 Сегодня", callback_data: "schedule:today" }, { text: "📅 Завтра", callback_data: "schedule:tomorrow" }],
+    [{ text: "✅ Подтверждённые", callback_data: "menu:confirmed" }],
+    [{ text: "📅 Другая дата", callback_data: "menu:datehelp" }],
+    [{ text: "⚙️ Бот", callback_data: "menu:status" }, { text: "🗑 Отклонённые", callback_data: "menu:rejected" }]
   ]};
 }
 
@@ -103,11 +105,42 @@ async function showPending(env, chatId, messageId, client) {
   return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
 }
 
-async function showSchedule(env, chatId, messageId, client) {
+function addDaysToDate(date, days) {
+  const [y, m, d] = date.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+}
+
+async function showScheduleForDate(env, chatId, messageId, client, date) {
   const all = await listBookings(env, client.id);
-  const today = new Date().toLocaleDateString("en-CA", { timeZone: client.timezone || "Europe/Riga" });
-  const day = all.filter(b => b.date === today && b.status !== "rejected").sort((a, b) => String(a.time).localeCompare(String(b.time)));
-  const text = day.length ? `📅 <b>Расписание на сегодня</b>\n\n${day.map(b => `${escapeHtml(b.time)} — <b>${escapeHtml(b.name)}</b>\n${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""} · ${escapeHtml(b.status || "pending")}`).join("\n\n")}` : `📅 <b>Расписание на сегодня</b>\n\nЗаписей на сегодня нет.`;
+  const day = all.filter(b => b.date === date && b.status !== "rejected")
+    .sort((a, b) => String(a.time).localeCompare(String(b.time)));
+  const text = day.length
+    ? `📅 <b>Расписание на ${escapeHtml(date)}</b>\\n\\n${day.map(b => `${escapeHtml(b.time)} — <b>${escapeHtml(b.name)}</b>\\n${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""} · ${escapeHtml(b.status || "pending")}`).join("\\n\\n")}`
+    : `📅 <b>Расписание на ${escapeHtml(date)}</b>\\n\\nЗаписей на эту дату нет.`;
+  const keyboard = { inline_keyboard: [
+    [{ text: "📅 Сегодня", callback_data: "schedule:today" }, { text: "📅 Завтра", callback_data: "schedule:tomorrow" }],
+    [{ text: "📋 Все подтверждённые", callback_data: "menu:confirmed" }],
+    [{ text: "← Главное меню", callback_data: "menu:home" }]
+  ]};
+  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+}
+
+async function showSchedule(env, chatId, messageId, client, offset = 0) {
+  const today = localDateString(client.timezone || "Europe/Riga");
+  return showScheduleForDate(env, chatId, messageId, client, addDaysToDate(today, offset));
+}
+
+async function showConfirmed(env, chatId, messageId, client) {
+  const confirmed = (await listBookings(env, client.id)).filter(b => b.status === "confirmed");
+  const text = confirmed.length
+    ? `✅ <b>Все подтверждённые записи</b>\\n\\n${confirmed.slice(0, 30).map((b, i) => `${i + 1}. ${escapeHtml(b.date || "—")} · ${escapeHtml(b.time || "—")} — <b>${escapeHtml(b.name || "—")}</b>\\n${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""}`).join("\\n\\n")}`
+    : "✅ <b>Подтверждённые записи</b>\\n\\nПока нет подтверждённых записей.";
+  const keyboard = { inline_keyboard: [[{ text: "📅 Сегодня", callback_data: "schedule:today" }, { text: "📅 Завтра", callback_data: "schedule:tomorrow" }], [{ text: "← Главное меню", callback_data: "menu:home" }]] };
+  return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
+}
+
+async function showDateHelp(env, chatId, messageId, client) {
+  const text = "📅 Чтобы открыть расписание на конкретную дату, отправь команду в формате:\\n\\n<code>/date 2026-11-23</code>\\n\\nУкажи нужную дату в формате ГГГГ-ММ-ДД.";
   return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: backKeyboard() }, client);
 }
 
@@ -151,8 +184,11 @@ async function handleTelegram(env, update) {
     if (data === "menu:home") return tg(env, "editMessageText", { chat_id: chatId, message_id: messageId, text: `💼 <b>${escapeHtml(client.name)}</b>\n\nПанель управления бронированиями\n\nВыберите раздел:`, parse_mode: "HTML", reply_markup: mainKeyboard() }, client);
     if (data === "menu:bookings") return showBookings(env, chatId, messageId, client);
     if (data === "menu:rejected") return showRejected(env, chatId, messageId, client);
+    if (data === "menu:confirmed") return showConfirmed(env, chatId, messageId, client);
+    if (data === "menu:datehelp") return showDateHelp(env, chatId, messageId, client);
     if (data === "menu:pending") return showPending(env, chatId, messageId, client);
-    if (data === "menu:schedule") return showSchedule(env, chatId, messageId, client);
+    if (data === "menu:schedule" || data === "schedule:today") return showSchedule(env, chatId, messageId, client, 0);
+    if (data === "schedule:tomorrow") return showSchedule(env, chatId, messageId, client, 1);
     if (data === "menu:status") return showStatus(env, chatId, messageId, client);
     if (data.startsWith("booking:view:")) {
       const id = data.slice("booking:view:".length);
@@ -181,7 +217,16 @@ async function handleTelegram(env, update) {
   if (["/start", "/help", "/menu"].includes(text.split(" ")[0])) return tg(env, "sendMessage", { chat_id: chatId, text: `💼 <b>${escapeHtml(client.name)}</b>\n\nПанель управления бронированиями\n\nВыберите раздел:`, parse_mode: "HTML", reply_markup: mainKeyboard() }, client);
   if (text === "/bookings") return showBookings(env, chatId, null, client);
   if (text === "/pending") return showPending(env, chatId, null, client);
-  if (text === "/today") return showSchedule(env, chatId, null, client);
+  if (text === "/today") return showSchedule(env, chatId, null, client, 0);
+  if (text === "/tomorrow") return showSchedule(env, chatId, null, client, 1);
+  if (text === "/confirmed") return showConfirmed(env, chatId, null, client);
+  if (text.startsWith("/date ")) {
+    const date = text.slice(6).trim();
+    if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(date) || Number.isNaN(Date.parse(date)) || new Date(date).toISOString().slice(0, 10) !== date) {
+      return tg(env, "sendMessage", { chat_id: chatId, text: "Неверная дата. Используй формат /date 2026-11-23", reply_markup: backKeyboard() }, client);
+    }
+    return showScheduleForDate(env, chatId, null, client, date);
+  }
   if (text === "/status") return showStatus(env, chatId, null, client);
 }
 
