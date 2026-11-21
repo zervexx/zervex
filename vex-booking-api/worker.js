@@ -502,6 +502,7 @@ export default {
       const tgResult = await tg(env, "sendMessage", { chat_id: client.telegramChatId, text: textLines.join("\n"), parse_mode: "HTML", disable_web_page_preview: true, reply_markup: bookingKeyboard(b.id) }, client);
       if (!tgResult.ok && env.BOOKINGS) {
         await env.BOOKINGS.delete(`booking:${client.id}:${b.id}`);
+        await env.BOOKINGS.delete(`status:${client.id}:${b.statusToken}`);
         await env.BOOKINGS.delete(`slot:${client.id}:${b.date}:${b.time}`);
         return json({ ok: false, error: `Не удалось отправить заявку: ${tgResult.description || tgResult.error_code || "Telegram API error"}` }, 502);
       }
