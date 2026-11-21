@@ -93,16 +93,17 @@ async function showBookings(env, chatId, messageId, client) {
   const all = (await listBookings(env, client.id)).filter(b => (b.status || "pending") !== "rejected");
   const pending = all.filter(b => (b.status || "pending") === "pending");
   const confirmed = all.filter(b => b.status === "confirmed");
-  const header = "<b>📋 ЗАПИСИ · " + escapeHtml(client.name).toUpperCase() + "</b>\n";
-  const summary = "Всего: <b>" + all.length + "</b>   ⏳ <b>" + pending.length + "</b>   ✅ <b>" + confirmed.length + "</b>";
   const cards = all.slice(0, 8).map((b, i) => {
     const status = b.status === "confirmed" ? "✅ ПОДТВЕРЖДЕНА" : "⏳ ОЖИДАЕТ";
-    return "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
-      "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
-      escapeHtml(bookingLabel(b)) + "\n" + status;
+    return "<blockquote><b>ЗАПИСЬ №" + (i + 1) + " · " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+      "📅 <b>Дата:</b> " + formatDateRu(b.date) + "\n" +
+      "🕒 <b>Время:</b> " + escapeHtml(b.time || "—") + "\n" +
+      "💈 <b>Услуга:</b> " + escapeHtml(bookingLabel(b)) + "\n" +
+      "<b>" + status + "</b></blockquote>";
   });
-  const text = header + "\n" + summary + "\n\n" +
-    (cards.length ? cards.join("\n\n──────────────\n\n") : "Пока нет активных записей.");
+  const text = "<b>📋 АКТИВНЫЕ ЗАПИСИ · " + escapeHtml(client.name).toUpperCase() + "</b>\n\n" +
+    "Всего: <b>" + all.length + "</b>   ⏳ <b>" + pending.length + "</b>   ✅ <b>" + confirmed.length + "</b>\n\n" +
+    (cards.length ? cards.join("\n\n") : "Активных записей пока нет.");
   const rows = all.slice(0, 8).map(b => [{
     text: (b.status === "confirmed" ? "✅ " : "⏳ ") + (b.name || "Клиент") + " · " + (b.time || "—"),
     callback_data: "booking:view:" + b.id
@@ -117,13 +118,15 @@ async function showBookings(env, chatId, messageId, client) {
 async function showRejected(env, chatId, messageId, client) {
   const rejected = (await listBookings(env, client.id)).filter(b => b.status === "rejected");
   const cards = rejected.slice(0, 20).map((b, i) =>
-    "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
-    "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
-    escapeHtml(bookingLabel(b)) + "\n✕ ОТКЛОНЕНА"
+    "<blockquote><b>ОТКЛОНЁННАЯ ЗАПИСЬ №" + (i + 1) + " · " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+    "📅 <b>Дата:</b> " + formatDateRu(b.date) + "\n" +
+    "🕒 <b>Время:</b> " + escapeHtml(b.time || "—") + "\n" +
+    "💈 <b>Услуга:</b> " + escapeHtml(bookingLabel(b)) + "\n" +
+    "✕ <b>ОТКЛОНЕНА</b></blockquote>"
   );
   const text = "<b>🗑 АРХИВ · " + escapeHtml(client.name).toUpperCase() + "</b>\n\n" +
     "Отклонённых заявок: <b>" + rejected.length + "</b>\n\n" +
-    (cards.length ? cards.join("\n\n──────────────\n\n") : "Архив пока пуст.");
+    (cards.length ? cards.join("\n\n") : "Архив пока пуст.");
   const keyboard = { inline_keyboard: [
     [{ text: "📋 Активные записи", callback_data: "menu:bookings" }],
     [{ text: "⌂ Главное меню", callback_data: "menu:home" }]
@@ -137,15 +140,16 @@ async function showPending(env, chatId, messageId, client) {
   const all = await listBookings(env, client.id);
   const pending = all.filter(b => (b.status || "pending") === "pending");
   const cards = pending.slice(0, 20).map((b, i) =>
-    "<b>" + (i + 1) + ". " + escapeHtml(b.name || "Клиент") + "</b>\n" +
-    "📅 " + formatDateRu(b.date) + "   ·   🕒 " + escapeHtml(b.time || "—") + "\n" +
-    escapeHtml(bookingLabel(b)) +
-    (b.bookingType === "restaurant" ? " · " + escapeHtml(b.guests) + " гостей" : "") +
-    "\n⏳ ОЖИДАЕТ ПОДТВЕРЖДЕНИЯ"
+    "<blockquote><b>НОВАЯ ЗАЯВКА №" + (i + 1) + " · " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+    "📅 <b>Дата:</b> " + formatDateRu(b.date) + "\n" +
+    "🕒 <b>Время:</b> " + escapeHtml(b.time || "—") + "\n" +
+    "💈 <b>Услуга:</b> " + escapeHtml(bookingLabel(b)) +
+    (b.bookingType === "restaurant" ? "\n👥 <b>Гостей:</b> " + escapeHtml(b.guests) : "") +
+    "\n⏳ <b>ОЖИДАЕТ ПОДТВЕРЖДЕНИЯ</b></blockquote>"
   );
   const text = "<b>⏳ НОВЫЕ ЗАЯВКИ</b>\n\n" +
     "Нужно обработать: <b>" + pending.length + "</b>\n\n" +
-    (cards.length ? cards.join("\n\n──────────────\n\n") : "Новых заявок нет. Всё обработано.");
+    (cards.length ? cards.join("\n\n") : "Новых заявок нет. Всё обработано.");
   const rows = pending.slice(0, 20).map(b => [{
     text: "Открыть · " + (b.name || "Клиент") + " · " + (b.time || "—"),
     callback_data: "booking:view:" + b.id
@@ -167,16 +171,15 @@ async function showScheduleForDate(env, chatId, messageId, client, date) {
     .sort((a, b) => String(a.time).localeCompare(String(b.time)));
   const confirmed = day.filter(b => b.status === "confirmed").length;
   const pending = day.filter(b => (b.status || "pending") === "pending").length;
-  const text = [
-    `📅 <b>РАСПИСАНИЕ · ${formatDateRu(date)}</b>`,
-    `Всего: <b>${day.length}</b>  ·  Подтверждено: <b>${confirmed}</b>  ·  Ожидает: <b>${pending}</b>`,
-    "",
-    ...(day.length ? day.map(b => [
-      `<b>${escapeHtml(b.time || "—")}  ·  ${escapeHtml(b.name || "Клиент")}</b>`,
-      `${escapeHtml(bookingLabel(b))}${b.bookingType === "restaurant" ? ` · ${escapeHtml(b.guests)} гостей` : ""}`,
-      statusLabel(b.status)
-    ].join("\n")) : ["На эту дату записей пока нет."])
-  ].join("\n\n");
+  const cards = day.map((b, i) =>
+    "<blockquote><b>ЗАПИСЬ №" + (i + 1) + " · " + escapeHtml(b.time || "—") + " · " + escapeHtml(b.name || "Клиент") + "</b>\n" +
+    "💈 <b>Услуга:</b> " + escapeHtml(bookingLabel(b)) +
+    (b.bookingType === "restaurant" ? "\n👥 <b>Гостей:</b> " + escapeHtml(b.guests) : "") +
+    "\n" + statusLabel(b.status) + "</blockquote>"
+  );
+  const text = "<b>📅 РАСПИСАНИЕ · " + formatDateRu(date) + "</b>\n\n" +
+    "Всего: <b>" + day.length + "</b>   ✅ <b>" + confirmed + "</b>   ⏳ <b>" + pending + "</b>\n\n" +
+    (cards.length ? cards.join("\n\n") : "На эту дату записей пока нет.");
   const keyboard = { inline_keyboard: [
     [{ text: "← Сегодня", callback_data: "schedule:today" }, { text: "Завтра →", callback_data: "schedule:tomorrow" }],
     [{ text: "✅ Все подтверждённые", callback_data: "menu:confirmed" }],
@@ -184,7 +187,6 @@ async function showScheduleForDate(env, chatId, messageId, client, date) {
   ]};
   return tg(env, messageId ? "editMessageText" : "sendMessage", { chat_id: chatId, ...(messageId ? { message_id: messageId } : {}), text, parse_mode: "HTML", reply_markup: keyboard }, client);
 }
-
 async function showSchedule(env, chatId, messageId, client, offset = 0) {
   const today = localDateString(client.timezone || "Europe/Riga");
   return showScheduleForDate(env, chatId, messageId, client, addDaysToDate(today, offset));
